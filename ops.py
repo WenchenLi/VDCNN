@@ -16,6 +16,9 @@
 special operations used in VDCNN,
 k_max_pool
 """
+import tensorflow as tf
+import numpy as np
+
 class k_max_pool(mx.operator.CustomOp):
 
     """
