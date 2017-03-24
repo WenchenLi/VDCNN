@@ -343,6 +343,7 @@ def _bn(x, is_training):
 
     return x
 
+
 def fc(x, c, units_out):
     num_units_in = x.get_shape()[1]
     assert units_out in ['L', 'S'] or type(units_out) is int, \
@@ -366,6 +367,27 @@ def fc(x, c, units_out):
 
     return x
 
+
+def _fc(x, units_out):
+
+    num_units_in = x.get_shape()[1]
+    num_units_out = units_out
+
+    weights_initializer = tf.truncated_normal_initializer(
+        stddev=config.FC_WEIGHT_STDDEV)
+
+    weights = _get_variable(str(units_out)+'weights',
+                            shape=[num_units_in, num_units_out],
+                            initializer=weights_initializer,
+                            weight_decay=config.FC_WEIGHT_STDDEV)
+    biases = _get_variable(str(units_out)+'biases',
+                           shape=[num_units_out],
+                           initializer=tf.zeros_initializer)
+    x = tf.nn.xw_plus_b(x, weights, biases)
+
+    return x
+
+
 def _get_variable(name,
                   shape,
                   initializer,
@@ -388,6 +410,7 @@ def _get_variable(name,
                            collections=collections,
                            trainable=trainable)
 
+
 def conv(x, c):
     ksize = c['ksize']
     stride = c['stride']
@@ -402,6 +425,7 @@ def conv(x, c):
                             initializer=initializer,
                             weight_decay=config.CONV_WEIGHT_DECAY)
     return tf.nn.conv2d(x, weights, [1, stride, stride, 1], padding='SAME')
+
 
 def _conv(x, kernel,stride,filters_out):
     # ksize = c['ksize']
@@ -425,6 +449,7 @@ def _conv(x, kernel,stride,filters_out):
                             initializer=initializer,
                             weight_decay=config.CONV_WEIGHT_DECAY)
     return tf.nn.conv2d(x, weights, [1, stride[0], stride[1], 1], padding='SAME')
+
 
 def _max_pool(x, ksize=3, stride=2):
     return tf.nn.max_pool(x,
@@ -461,7 +486,9 @@ class VDCNN(object):
         num_filters3 = 256
         num_filters4 = 512
         activation = tf.nn.relu
-
+        fc1_hidden_size = 4096
+        fc2_hidden_size = 2048
+        num_output =2
         self.is_training = tf.convert_to_tensor(is_training,
                                             dtype='bool',
                                             name='is_training')
@@ -495,15 +522,61 @@ class VDCNN(object):
         norm12 = bn(conv12, self.is_training)
         act12 = activation(features=norm12, name='relu')
 
+        # CONVOLUTION_BLOCK (2 of 4) -> 128 FILTERS
+        conv61 = _conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2)
+        norm61 = bn(conv61, self.is_training)
+        act61 = activation(features=norm61, name='relu')
+        conv62 = _conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2)
+        norm62 = bn(conv62, self.is_training)
+        act62 = activation(features=norm62, name='relu')
+
+        # CONVOLUTION_BLOCK (3 of 4) -> 256 FILTERS
+        conv111 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3)
+        norm111 = bn(conv111, self.is_training)
+        act111 = activation(features=norm111, name='relu')
+        conv112 = _conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3)
+        norm112 = bn(conv112, self.is_training)
+        act112 = activation(features=norm112, name='relu')
+
+        # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
+        conv131 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters4)
+        norm131 = bn(conv131, self.is_training)
+        act131 = activation(features=norm131, name='relu')
+        conv132 = _conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4)
+        norm132 = bn(conv132, self.is_training)
+        act132 = activation(features=norm132, name='relu')
+
+        # K-max pooling (k=8) ? vs max pooling , according to paper,
+        # Max-pooling performs better than other pool-
+        # ing types. In terms of pooling, we can also see
+        # that max-pooling performs best overall, very close
+        # to convolutions with stride 2, but both are signifi-
+        # cantly superior to k-max pooling.
+
+        max_pool = _max_pool(act132)
+        flatten = tf.reshape(max_pool, [-1, num_filters4])
+
+        # Fully connected layers (fc)
+        # fc1
+        fc1 = _fc(flatten,fc1_hidden_size)
+        act_fc1 = activation(fc1)
+
+        # fc2
+        fc2 = _fc(act_fc1,fc2_hidden_size)
+        act_fc2 = activation(fc2)
+
+        # fc3
+        logits = _fc(act_fc2, num_output)
+        predictions = tf.argmax(logits, 1, name="prediction")
 
         # CalculateMean cross-entropy loss
         with tf.name_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
+            losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.input_y)
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
 
         # Accuracy
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
+            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
 
