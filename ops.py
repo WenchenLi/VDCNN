@@ -131,6 +131,82 @@ def _max_pool(x, ksize=3, stride=2):
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
                           padding='VALID')
+#
+# def conv(x, c):
+#     ksize = c['ksize']
+#     stride = c['stride']
+#     filters_out = c['conv_filters_out']
+#
+#     filters_in = x.get_shape()[-1]
+#     shape = [ksize, ksize, filters_in, filters_out]
+#     initializer = tf.truncated_normal_initializer(stddev=config.CONV_WEIGHT_STDDEV)
+#     weights = _get_variable('weights',
+#                             shape=shape,
+#                             dtype='float',
+#                             initializer=initializer,
+#                             weight_decay=config.CONV_WEIGHT_DECAY)
+#     return tf.nn.conv2d(x, weights, [1, stride, stride, 1], padding='SAME')
+# def fc(x, c, units_out):
+#     num_units_in = x.get_shape()[1]
+#     assert units_out in ['L', 'S'] or type(units_out) is int, \
+#         "units_out badly configured, accepting int or ['L','S']"
+#     if type(units_out) is int:
+#         num_units_out = units_out
+#     else:
+#         num_units_out = c[units_out + '_fc_units_out']
+#
+#     weights_initializer = tf.truncated_normal_initializer(
+#         stddev=config.FC_WEIGHT_STDDEV)
+#
+#     weights = _get_variable(str(units_out)+'weights',
+#                             shape=[num_units_in, num_units_out],
+#                             initializer=weights_initializer,
+#                             weight_decay=config.FC_WEIGHT_STDDEV)
+#     biases = _get_variable(str(units_out)+'biases',
+#                            shape=[num_units_out],
+#                            initializer=tf.zeros_initializer)
+#     x = tf.nn.xw_plus_b(x, weights, biases)
+#
+#     return x
+
+# def bn(x, c):
+#     x_shape = x.get_shape()
+#     params_shape = x_shape[-1:]
+#
+#     axis = list(range(len(x_shape) - 1))
+#
+#     beta = _get_variable('beta',
+#                          params_shape,
+#                          initializer=tf.zeros_initializer)
+#     gamma = _get_variable('gamma',
+#                           params_shape,
+#                           initializer=tf.ones_initializer)
+#
+#     moving_mean = _get_variable('moving_mean',
+#                                 params_shape,
+#                                 initializer=tf.zeros_initializer,
+#                                 trainable=False)
+#     moving_variance = _get_variable('moving_variance',
+#                                     params_shape,
+#                                     initializer=tf.ones_initializer,
+#                                     trainable=False)
+#
+#     # These ops will only be preformed when training.
+#     mean, variance = tf.nn.moments(x, axis)
+#     update_moving_mean = moving_averages.assign_moving_average(moving_mean,
+#                                                                mean, config.BN_DECAY)
+#     update_moving_variance = moving_averages.assign_moving_average(
+#         moving_variance, variance, config.BN_DECAY)
+#     tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
+#     tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
+#
+#     mean, variance = control_flow_ops.cond(
+#         c['is_training'], lambda: (mean, variance),
+#         lambda: (moving_mean, moving_variance))
+#
+#     x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, config.BN_EPSILON)
+#
+#     return x
 
 @mx.operator.register("k_max_pool")
 class k_max_poolProp(mx.operator.CustomOpProp):

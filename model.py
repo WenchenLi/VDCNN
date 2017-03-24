@@ -29,10 +29,8 @@ import ops
 from tensorflow.python.training import moving_averages
 from tensorflow.python.ops import control_flow_ops
 
-
-RESNET_VARIABLES = 'resnet_variables'
-UPDATE_OPS_COLLECTION = 'resnet_update_ops'  # must be grouped with training op
-
+# RESNET_VARIABLES = 'resnet_variables'
+# UPDATE_OPS_COLLECTION = 'resnet_update_ops'  # must be grouped with training op
 FLAGS = tf.app.flags.FLAGS
 
 class Config:
@@ -106,202 +104,163 @@ class Config:
             return var_scope_name.startswith(self.name)
 
 
-def get_resnet_training_model(is_training,var_reuse=None):
-
-    x, conv_layer, c = resenet_conv_layer(is_training,variable_reuse=var_reuse)
-
-    # S
-    with tf.variable_scope('S',reuse=c['variable_reuse']):
-        S = []
-        for i in xrange(config.MAX_LEN_CHARS ):
-            with tf.variable_scope(str(i) + '_mlp',reuse=c['variable_reuse']):
-                bn_ = bn(activation(fc(conv_layer, c, 2048)),c)
-                fc_ = fc(bn_, c, "S")
-                S.append(tf.nn.softmax(fc_))
-        S_logits = ops.concatenate(S, "merged_S")
-        S_logits = tf.reshape(S_logits,(-1,config.MAX_LEN_CHARS,config.NUM_CLASSES))
-        y = S_logits
-
-    # L
-    with tf.variable_scope('L_mlp',reuse=c['variable_reuse']):
-        out_L = bn(activation(fc(conv_layer, c, 2048)),c)
-        L_logits = fc(out_L, c, "L")
-        l = L_logits
-
-    return (x, y, l)
-
-def resenet_conv_layer(is_training,
-                          L_num_classes=7,
-                          S_num_classes=63,
-                          num_blocks=None,  # defaults to 50-layer network
-                          use_bias=False,  # defaults to using batch norm
-                          bottleneck=True,
-                        variable_reuse=None):
-    if num_blocks is None:
-        num_blocks = [3, 4, 6, 3]
-
-    c = Config()
-    c['bottleneck'] = bottleneck
-    c['is_training'] = tf.convert_to_tensor(is_training,
-                                            dtype='bool',
-                                            name='is_training')
-    c['ksize'] = 3
-    c['stride'] = 1
-    c['use_bias'] = use_bias
-    c['L_fc_units_out'] = L_num_classes
-    c['S_fc_units_out'] = S_num_classes
-    c['num_blocks'] = num_blocks
-    c['stack_stride'] = 2
-    c['variable_reuse'] = variable_reuse
-
-    x = tf.placeholder(tf.float32, [None, 200, 200, config.NUM_CHANNELS])
-
-    with tf.variable_scope('scale1',reuse=c['variable_reuse']):
-        c['conv_filters_out'] = 64
-        c['ksize'] = 7
-        c['stride'] = 2
-        out = conv(x, c)
-        out = bn(out, c)
-        out = activation(out)
-        out = _max_pool(out, ksize=3, stride=2)
-
-
-    with tf.variable_scope('scale2',reuse=c['variable_reuse']):
-        c['num_blocks'] = num_blocks[0]
-        c['stack_stride'] = 1
-        c['block_filters_internal'] = 64
-        assert c['ksize'] == 3
-        out = stack(out, c)
-
-    with tf.variable_scope('scale3',reuse=c['variable_reuse']):
-        c['num_blocks'] = num_blocks[1]
-        c['block_filters_internal'] = 128
-        assert c['ksize'] == 3
-        out = stack(out, c)
-
-    with tf.variable_scope('scale4',reuse=c['variable_reuse']):
-        c['num_blocks'] = num_blocks[2]
-        c['block_filters_internal'] = 256
-        assert c['ksize'] == 3
-        out = stack(out, c)
-
-    with tf.variable_scope('scale5',reuse=c['variable_reuse']):
-        c['num_blocks'] = num_blocks[3]
-        c['block_filters_internal'] = 512
-        assert c['ksize'] == 3
-        out = stack(out, c)
-
-    with tf.variable_scope('post-net',reuse=c['variable_reuse']):
-        avg_pool = tf.reduce_mean(out, reduction_indices=[1, 2], name="avg_pool")
-
-    return x, avg_pool, c
-
-
-def stack(x, c):
-    for n in range(c['num_blocks']):
-        s = c['stack_stride'] if n == 0 else 1
-        c['block_stride'] = s
-        with tf.variable_scope('block%d' % (n + 1),reuse=c['variable_reuse']):
-            x = block(x, c)
-    return x
-
-
-def block(x, c):
-    filters_in = x.get_shape()[-1]
-
-    # Note: filters_out isn't how many filters are outputed.
-    # That is the case when bottleneck=False but when bottleneck is
-    # True, filters_internal*4 filters are outputted. filters_internal is how many filters
-    # the 3x3 convs output internally.
-    m = 4 if c['bottleneck'] else 1
-    filters_out = m * c['block_filters_internal']
-
-    shortcut = x  # branch 1
-
-    c['conv_filters_out'] = c['block_filters_internal']
-
-    if c['bottleneck']:
-        with tf.variable_scope('a',reuse=c['variable_reuse']):
-            c['ksize'] = 1
-            c['stride'] = c['block_stride']
-            x = conv(x, c)
-            x = bn(x, c)
-            x = activation(x)
-
-        with tf.variable_scope('b',reuse=c['variable_reuse']):
-            x = conv(x, c)
-            x = bn(x, c)
-            x = activation(x)
-
-        with tf.variable_scope('c',reuse=c['variable_reuse']):
-            c['conv_filters_out'] = filters_out
-            c['ksize'] = 1
-            assert c['stride'] == 1
-            x = conv(x, c)
-            x = bn(x, c)
-    else:
-        with tf.variable_scope('A',reuse=c['variable_reuse']):
-            c['stride'] = c['block_stride']
-            assert c['ksize'] == 3
-            x = conv(x, c)
-            x = bn(x, c)
-            x = activation(x)
-
-        with tf.variable_scope('B',reuse=c['variable_reuse']):
-            c['conv_filters_out'] = filters_out
-            assert c['ksize'] == 3
-            assert c['stride'] == 1
-            x = conv(x, c)
-            x = bn(x, c)
-
-    with tf.variable_scope('shortcut',reuse=c['variable_reuse']):
-        if filters_out != filters_in or c['block_stride'] != 1:
-            c['ksize'] = 1
-            c['stride'] = c['block_stride']
-            c['conv_filters_out'] = filters_out
-            shortcut = conv(shortcut, c)
-            shortcut = bn(shortcut, c)
-
-    return activation(x + shortcut)
-
-def bn(x, c):
-    x_shape = x.get_shape()
-    params_shape = x_shape[-1:]
-
-    axis = list(range(len(x_shape) - 1))
-
-    beta = _get_variable('beta',
-                         params_shape,
-                         initializer=tf.zeros_initializer)
-    gamma = _get_variable('gamma',
-                          params_shape,
-                          initializer=tf.ones_initializer)
-
-    moving_mean = _get_variable('moving_mean',
-                                params_shape,
-                                initializer=tf.zeros_initializer,
-                                trainable=False)
-    moving_variance = _get_variable('moving_variance',
-                                    params_shape,
-                                    initializer=tf.ones_initializer,
-                                    trainable=False)
-
-    # These ops will only be preformed when training.
-    mean, variance = tf.nn.moments(x, axis)
-    update_moving_mean = moving_averages.assign_moving_average(moving_mean,
-                                                               mean, config.BN_DECAY)
-    update_moving_variance = moving_averages.assign_moving_average(
-        moving_variance, variance, config.BN_DECAY)
-    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
-    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
-
-    mean, variance = control_flow_ops.cond(
-        c['is_training'], lambda: (mean, variance),
-        lambda: (moving_mean, moving_variance))
-
-    x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, config.BN_EPSILON)
-
-    return x
+# def get_resnet_training_model(is_training,var_reuse=None):
+#
+#     x, conv_layer, c = resenet_conv_layer(is_training,variable_reuse=var_reuse)
+#
+#     # S
+#     with tf.variable_scope('S',reuse=c['variable_reuse']):
+#         S = []
+#         for i in xrange(config.MAX_LEN_CHARS ):
+#             with tf.variable_scope(str(i) + '_mlp',reuse=c['variable_reuse']):
+#                 bn_ = bn(activation(fc(conv_layer, c, 2048)),c)
+#                 fc_ = fc(bn_, c, "S")
+#                 S.append(tf.nn.softmax(fc_))
+#         S_logits = ops.concatenate(S, "merged_S")
+#         S_logits = tf.reshape(S_logits,(-1,config.MAX_LEN_CHARS,config.NUM_CLASSES))
+#         y = S_logits
+#
+#     # L
+#     with tf.variable_scope('L_mlp',reuse=c['variable_reuse']):
+#         out_L = bn(activation(fc(conv_layer, c, 2048)),c)
+#         L_logits = fc(out_L, c, "L")
+#         l = L_logits
+#
+#     return (x, y, l)
+#
+# def resenet_conv_layer(is_training,
+#                           L_num_classes=7,
+#                           S_num_classes=63,
+#                           num_blocks=None,  # defaults to 50-layer network
+#                           use_bias=False,  # defaults to using batch norm
+#                           bottleneck=True,
+#                         variable_reuse=None):
+#     if num_blocks is None:
+#         num_blocks = [3, 4, 6, 3]
+#
+#     c = Config()
+#     c['bottleneck'] = bottleneck
+#     c['is_training'] = tf.convert_to_tensor(is_training,
+#                                             dtype='bool',
+#                                             name='is_training')
+#     c['ksize'] = 3
+#     c['stride'] = 1
+#     c['use_bias'] = use_bias
+#     c['L_fc_units_out'] = L_num_classes
+#     c['S_fc_units_out'] = S_num_classes
+#     c['num_blocks'] = num_blocks
+#     c['stack_stride'] = 2
+#     c['variable_reuse'] = variable_reuse
+#
+#     x = tf.placeholder(tf.float32, [None, 200, 200, config.NUM_CHANNELS])
+#
+#     with tf.variable_scope('scale1',reuse=c['variable_reuse']):
+#         c['conv_filters_out'] = 64
+#         c['ksize'] = 7
+#         c['stride'] = 2
+#         out = conv(x, c)
+#         out = bn(out, c)
+#         out = activation(out)
+#         out = _max_pool(out, ksize=3, stride=2)
+#
+#
+#     with tf.variable_scope('scale2',reuse=c['variable_reuse']):
+#         c['num_blocks'] = num_blocks[0]
+#         c['stack_stride'] = 1
+#         c['block_filters_internal'] = 64
+#         assert c['ksize'] == 3
+#         out = stack(out, c)
+#
+#     with tf.variable_scope('scale3',reuse=c['variable_reuse']):
+#         c['num_blocks'] = num_blocks[1]
+#         c['block_filters_internal'] = 128
+#         assert c['ksize'] == 3
+#         out = stack(out, c)
+#
+#     with tf.variable_scope('scale4',reuse=c['variable_reuse']):
+#         c['num_blocks'] = num_blocks[2]
+#         c['block_filters_internal'] = 256
+#         assert c['ksize'] == 3
+#         out = stack(out, c)
+#
+#     with tf.variable_scope('scale5',reuse=c['variable_reuse']):
+#         c['num_blocks'] = num_blocks[3]
+#         c['block_filters_internal'] = 512
+#         assert c['ksize'] == 3
+#         out = stack(out, c)
+#
+#     with tf.variable_scope('post-net',reuse=c['variable_reuse']):
+#         avg_pool = tf.reduce_mean(out, reduction_indices=[1, 2], name="avg_pool")
+#
+#     return x, avg_pool, c
+#
+#
+# def stack(x, c):
+#     for n in range(c['num_blocks']):
+#         s = c['stack_stride'] if n == 0 else 1
+#         c['block_stride'] = s
+#         with tf.variable_scope('block%d' % (n + 1),reuse=c['variable_reuse']):
+#             x = block(x, c)
+#     return x
+#
+#
+# def block(x, c):
+#     filters_in = x.get_shape()[-1]
+#
+#     # Note: filters_out isn't how many filters are outputed.
+#     # That is the case when bottleneck=False but when bottleneck is
+#     # True, filters_internal*4 filters are outputted. filters_internal is how many filters
+#     # the 3x3 convs output internally.
+#     m = 4 if c['bottleneck'] else 1
+#     filters_out = m * c['block_filters_internal']
+#
+#     shortcut = x  # branch 1
+#
+#     c['conv_filters_out'] = c['block_filters_internal']
+#
+#     if c['bottleneck']:
+#         with tf.variable_scope('a',reuse=c['variable_reuse']):
+#             c['ksize'] = 1
+#             c['stride'] = c['block_stride']
+#             x = conv(x, c)
+#             x = bn(x, c)
+#             x = activation(x)
+#
+#         with tf.variable_scope('b',reuse=c['variable_reuse']):
+#             x = conv(x, c)
+#             x = bn(x, c)
+#             x = activation(x)
+#
+#         with tf.variable_scope('c',reuse=c['variable_reuse']):
+#             c['conv_filters_out'] = filters_out
+#             c['ksize'] = 1
+#             assert c['stride'] == 1
+#             x = conv(x, c)
+#             x = bn(x, c)
+#     else:
+#         with tf.variable_scope('A',reuse=c['variable_reuse']):
+#             c['stride'] = c['block_stride']
+#             assert c['ksize'] == 3
+#             x = conv(x, c)
+#             x = bn(x, c)
+#             x = activation(x)
+#
+#         with tf.variable_scope('B',reuse=c['variable_reuse']):
+#             c['conv_filters_out'] = filters_out
+#             assert c['ksize'] == 3
+#             assert c['stride'] == 1
+#             x = conv(x, c)
+#             x = bn(x, c)
+#
+#     with tf.variable_scope('shortcut',reuse=c['variable_reuse']):
+#         if filters_out != filters_in or c['block_stride'] != 1:
+#             c['ksize'] = 1
+#             c['stride'] = c['block_stride']
+#             c['conv_filters_out'] = filters_out
+#             shortcut = conv(shortcut, c)
+#             shortcut = bn(shortcut, c)
+#
+#     return activation(x + shortcut)
 
 
 def _bn(x, is_training):
@@ -340,30 +299,6 @@ def _bn(x, is_training):
         lambda: (moving_mean, moving_variance))
 
     x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, config.BN_EPSILON)
-
-    return x
-
-
-def fc(x, c, units_out):
-    num_units_in = x.get_shape()[1]
-    assert units_out in ['L', 'S'] or type(units_out) is int, \
-        "units_out badly configured, accepting int or ['L','S']"
-    if type(units_out) is int:
-        num_units_out = units_out
-    else:
-        num_units_out = c[units_out + '_fc_units_out']
-
-    weights_initializer = tf.truncated_normal_initializer(
-        stddev=config.FC_WEIGHT_STDDEV)
-
-    weights = _get_variable(str(units_out)+'weights',
-                            shape=[num_units_in, num_units_out],
-                            initializer=weights_initializer,
-                            weight_decay=config.FC_WEIGHT_STDDEV)
-    biases = _get_variable(str(units_out)+'biases',
-                           shape=[num_units_out],
-                           initializer=tf.zeros_initializer)
-    x = tf.nn.xw_plus_b(x, weights, biases)
 
     return x
 
@@ -411,20 +346,7 @@ def _get_variable(name,
                            trainable=trainable)
 
 
-def conv(x, c):
-    ksize = c['ksize']
-    stride = c['stride']
-    filters_out = c['conv_filters_out']
 
-    filters_in = x.get_shape()[-1]
-    shape = [ksize, ksize, filters_in, filters_out]
-    initializer = tf.truncated_normal_initializer(stddev=config.CONV_WEIGHT_STDDEV)
-    weights = _get_variable('weights',
-                            shape=shape,
-                            dtype='float',
-                            initializer=initializer,
-                            weight_decay=config.CONV_WEIGHT_DECAY)
-    return tf.nn.conv2d(x, weights, [1, stride, stride, 1], padding='SAME')
 
 
 def _conv(x, kernel,stride,filters_out):
@@ -433,7 +355,6 @@ def _conv(x, kernel,stride,filters_out):
     # filters_out = c['conv_filters_out']
 
     """
-
     :param x:
     :param temp_kernel:
     :param stride:
@@ -462,8 +383,6 @@ class VDCNN(object):
     """
     very deep CNN for text classification.
     """
-
-
     def __init__(
       self, sequence_length,
             num_classes,
@@ -479,8 +398,8 @@ class VDCNN(object):
         temp_kernel = (3, embedding_size)
         kernel = (3, 1)
         stride = (2, 1)
-        padding = (1, 0)
-        kmax = 8
+        # padding = (1, 0)
+        # kmax = 8
         num_filters1 = 64
         num_filters2 = 128
         num_filters3 = 256
@@ -488,7 +407,8 @@ class VDCNN(object):
         activation = tf.nn.relu
         fc1_hidden_size = 4096
         fc2_hidden_size = 2048
-        num_output =2
+        num_output = 2
+
         self.is_training = tf.convert_to_tensor(is_training,
                                             dtype='bool',
                                             name='is_training')
@@ -539,7 +459,7 @@ class VDCNN(object):
         act112 = activation(features=norm112, name='relu')
 
         # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
-        conv131 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters4)
+        conv131 = _conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4)
         norm131 = bn(conv131, self.is_training)
         act131 = activation(features=norm131, name='relu')
         conv132 = _conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4)
