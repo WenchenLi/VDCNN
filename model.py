@@ -29,8 +29,8 @@ import ops
 from tensorflow.python.training import moving_averages
 from tensorflow.python.ops import control_flow_ops
 
-# RESNET_VARIABLES = 'resnet_variables'
-# UPDATE_OPS_COLLECTION = 'resnet_update_ops'  # must be grouped with training op
+RESNET_VARIABLES = 'vdcnn_variables'
+UPDATE_OPS_COLLECTION = 'vdcnn_update_ops'  # must be grouped with training op
 FLAGS = tf.app.flags.FLAGS
 
 class Config:
@@ -263,26 +263,26 @@ class Config:
 #     return activation(x + shortcut)
 
 
-def _bn(x, is_training):
+def _bn(x, is_training,name):
     x_shape = x.get_shape()
     params_shape = x_shape[-1:]
 
     axis = list(range(len(x_shape) - 1))
 
-    beta = _get_variable('beta',
+    beta = _get_variable('beta'+"_"+name,
                          params_shape,
-                         initializer=tf.zeros_initializer)
-    gamma = _get_variable('gamma',
+                         initializer=tf.zeros_initializer())
+    gamma = _get_variable('gamma'+"_"+name,
                           params_shape,
-                          initializer=tf.ones_initializer)
+                          initializer=tf.ones_initializer())
 
-    moving_mean = _get_variable('moving_mean',
+    moving_mean = _get_variable('moving_mean'+"_"+name,
                                 params_shape,
-                                initializer=tf.zeros_initializer,
+                                initializer=tf.zeros_initializer(),
                                 trainable=False)
-    moving_variance = _get_variable('moving_variance',
+    moving_variance = _get_variable('moving_variance'+"_"+name,
                                     params_shape,
-                                    initializer=tf.ones_initializer,
+                                    initializer=tf.ones_initializer(),
                                     trainable=False)
 
     # These ops will only be preformed when training.
@@ -317,7 +317,7 @@ def _fc(x, units_out):
                             weight_decay=config.FC_WEIGHT_STDDEV)
     biases = _get_variable(str(units_out)+'biases',
                            shape=[num_units_out],
-                           initializer=tf.zeros_initializer)
+                           initializer=tf.zeros_initializer())
     x = tf.nn.xw_plus_b(x, weights, biases)
 
     return x
@@ -336,7 +336,7 @@ def _get_variable(name,
         regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
     else:
         regularizer = None
-    collections = [tf.GraphKeys.VARIABLES, RESNET_VARIABLES]
+    collections = [tf.GraphKeys.GLOBAL_VARIABLES, RESNET_VARIABLES]
     return tf.get_variable(name,
                            shape=shape,
                            initializer=initializer,
@@ -346,10 +346,7 @@ def _get_variable(name,
                            trainable=trainable)
 
 
-
-
-
-def _conv(x, kernel,stride,filters_out):
+def _conv(x, kernel,stride,filters_out,name):
     # ksize = c['ksize']
     # stride = c['stride']
     # filters_out = c['conv_filters_out']
@@ -364,7 +361,7 @@ def _conv(x, kernel,stride,filters_out):
     filters_in = x.get_shape()[-1]
     shape = [kernel[0], kernel[1], filters_in, filters_out]
     initializer = tf.truncated_normal_initializer(stddev=config.CONV_WEIGHT_STDDEV)
-    weights = _get_variable('weights',
+    weights = _get_variable('weights'+"_"+name,
                             shape=shape,
                             dtype='float',
                             initializer=initializer,
@@ -372,7 +369,7 @@ def _conv(x, kernel,stride,filters_out):
     return tf.nn.conv2d(x, weights, [1, stride[0], stride[1], 1], padding='SAME')
 
 
-def _max_pool(x, ksize=3, stride=2):
+def _max_pool(x, ksize=1, stride=1):
     return tf.nn.max_pool(x,
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
@@ -393,8 +390,8 @@ class VDCNN(object):
             is_training,
             l2_reg_lambda=0.0):
 
-        vocab_size = 69
-        embedding_size = 16
+        # vocab_size = 69# we use none atomic now
+        # embedding_size = 16
         temp_kernel = (3, embedding_size)
         kernel = (3, 1)
         stride = (2, 1)
@@ -431,40 +428,44 @@ class VDCNN(object):
 
         # Temp Conv (in: batch, 1, 1014, 16)
         conv0 = _conv(x=self.embedded_chars_expanded, kernel=temp_kernel,
-                      stride=stride, filters_out=num_filters1)
+                      stride=stride, filters_out=num_filters1,name='conv0')
         act0 = activation(features=conv0, name='relu')
 
         # CONVOLUTION_BLOCK (1 of 4) -> 64 FILTERS
-        conv11 = _conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1)
-        norm11 = bn(conv11, self.is_training)
-        act11 = activation(features=norm11, name='relu')
-        conv12 = _conv(x=act11, kernel=kernel, stride=stride,filters_out=num_filters1)
-        norm12 = bn(conv12, self.is_training)
-        act12 = activation(features=norm12, name='relu')
+        with tf.variable_scope('block1'):
+            conv11 = _conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv11')
+            norm11 = _bn(conv11, self.is_training,name='norm11')
+            act11 = activation(features=norm11, name='relu')
+            conv12 = _conv(x=act11, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv12')
+            norm12 = _bn(conv12, self.is_training,name='norm12')
+            act12 = activation(features=norm12, name='relu')
 
         # CONVOLUTION_BLOCK (2 of 4) -> 128 FILTERS
-        conv61 = _conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2)
-        norm61 = bn(conv61, self.is_training)
-        act61 = activation(features=norm61, name='relu')
-        conv62 = _conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2)
-        norm62 = bn(conv62, self.is_training)
-        act62 = activation(features=norm62, name='relu')
+        with tf.variable_scope('block2'):
+            conv61 = _conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv61')
+            norm61 = _bn(conv61, self.is_training, name='norm61')
+            act61 = activation(features=norm61, name='relu')
+            conv62 = _conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv62')
+            norm62 = _bn(conv62, self.is_training,name='norm62')
+            act62 = activation(features=norm62, name='relu')
 
         # CONVOLUTION_BLOCK (3 of 4) -> 256 FILTERS
-        conv111 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3)
-        norm111 = bn(conv111, self.is_training)
-        act111 = activation(features=norm111, name='relu')
-        conv112 = _conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3)
-        norm112 = bn(conv112, self.is_training)
-        act112 = activation(features=norm112, name='relu')
+        with tf.variable_scope('block3'):
+            conv111 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
+            norm111 = _bn(conv111, self.is_training,name='norm111')
+            act111 = activation(features=norm111, name='relu')
+            conv112 = _conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3,name='conv112')
+            norm112 = _bn(conv112, self.is_training, name='norm112')
+            act112 = activation(features=norm112, name='relu')
 
         # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
-        conv131 = _conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4)
-        norm131 = bn(conv131, self.is_training)
-        act131 = activation(features=norm131, name='relu')
-        conv132 = _conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4)
-        norm132 = bn(conv132, self.is_training)
-        act132 = activation(features=norm132, name='relu')
+        with tf.variable_scope('block4'):
+            conv131 = _conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv131')
+            norm131 = _bn(conv131, self.is_training,name='norm131')
+            act131 = activation(features=norm131, name='relu')
+            conv132 = _conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv132')
+            norm132 = _bn(conv132, self.is_training,name='norm132')
+            act132 = activation(features=norm132, name='relu')
 
         # K-max pooling (k=8) ? vs max pooling , according to paper,
         # Max-pooling performs better than other pool-

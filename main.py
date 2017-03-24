@@ -22,7 +22,7 @@ import os
 import time
 import datetime
 import util
-from model import TextCNN
+from model import TextCNN,VDCNN
 from tensorflow.contrib import learn
 
 
@@ -93,15 +93,18 @@ with tf.Graph().as_default():
       allow_soft_placement=FLAGS.allow_soft_placement,
       log_device_placement=FLAGS.log_device_placement)
     sess = tf.Session(config=session_conf)
+    is_training = tf.placeholder('bool', [], name='is_training')
+
     with sess.as_default():
-        cnn = TextCNN(
+        cnn = VDCNN(
             sequence_length=x_train.shape[1],
             num_classes=y_train.shape[1],
             vocab_size=len(vocab_processor.vocabulary_),
             embedding_size=FLAGS.embedding_dim,
             filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
             num_filters=FLAGS.num_filters,
-            l2_reg_lambda=FLAGS.l2_reg_lambda)
+            l2_reg_lambda=FLAGS.l2_reg_lambda,
+            is_training=is_training)
 
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -158,8 +161,11 @@ with tf.Graph().as_default():
             feed_dict = {
               cnn.input_x: x_batch,
               cnn.input_y: y_batch,
-              cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+              is_training: True
             }
+
+            #   cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+            # }
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
                 feed_dict)
@@ -174,8 +180,10 @@ with tf.Graph().as_default():
             feed_dict = {
               cnn.input_x: x_batch,
               cnn.input_y: y_batch,
-              cnn.dropout_keep_prob: 1.0
+              is_training:False
             }
+            #   cnn.dropout_keep_prob: 1.0
+            # }
             step, summaries, loss, accuracy = sess.run(
                 [global_step, dev_summary_op, cnn.loss, cnn.accuracy],
                 feed_dict)
