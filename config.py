@@ -5,6 +5,7 @@ SD = 0.05  # std for gaussian distribution
 NOUTPUT = 2
 DATA_SHAPE = (BATCH_SIZE, 1, FEATURE_LEN, 1)
 ALPHABET = list("abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+ =<>()[]{}")
+CHIENSE_ALPHABET = []#TODO add chiense common words here as atomic input elements
 
 # resnet stuff
 FULLCHARS = [u'1', u'0', u'3', u'2', u'5', u'4', u'7', u'6', u'9', u'8', 'empty', u'A', u'C', u'B', u'E', u'D', u'G',
