@@ -1,4 +1,5 @@
 FEATURE_LEN = 1014
+CHAR_EBD_SIZE = 16
 BATCH_SIZE = 128
 EPOCHS = 10
 SD = 0.05  # std for gaussian distribution

@@ -385,17 +385,14 @@ class VDCNN(object):
             num_classes,
             vocab_size,
             embedding_size,
-            filter_sizes,
-            num_filters,
             is_training,
             l2_reg_lambda=0.0):
 
         # vocab_size = 69# we use none atomic now
-        # embedding_size = 16
+        embedding_size = 16
         temp_kernel = (3, embedding_size)
         kernel = (3, 1)
         stride = (2, 1)
-        # padding = (1, 0)
         # kmax = 8
         num_filters1 = 64
         num_filters2 = 128
@@ -426,11 +423,13 @@ class VDCNN(object):
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
+        print self.embedded_chars
+        print self.embedded_chars_expanded
         # Temp Conv (in: batch, 1, 1014, 16)
         conv0 = _conv(x=self.embedded_chars_expanded, kernel=temp_kernel,
                       stride=stride, filters_out=num_filters1,name='conv0')
         act0 = activation(features=conv0, name='relu')
-
+        print act0
         # CONVOLUTION_BLOCK (1 of 4) -> 64 FILTERS
         with tf.variable_scope('block1'):
             conv11 = _conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv11')
@@ -486,18 +485,19 @@ class VDCNN(object):
         fc2 = _fc(act_fc1,fc2_hidden_size)
         act_fc2 = activation(fc2)
 
-        # fc3
-        logits = _fc(act_fc2, num_output)
-        predictions = tf.argmax(logits, 1, name="prediction")
-
         # CalculateMean cross-entropy loss
+        logits = _fc(act_fc2, num_output)
         with tf.name_scope("loss"):
             losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.input_y)
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
 
+
         # Accuracy
+        predictions = tf.argmax(logits, 1, name="prediction")
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y, 1))
+            print predictions
+            print self.input_y #f.argmax(self.input_y, 1)
+            correct_predictions = tf.equal(logits, self.input_y)
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
 
