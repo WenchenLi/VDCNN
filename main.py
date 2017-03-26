@@ -70,7 +70,7 @@ x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_d
 # vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
 # x = np.array(list(vocab_processor.fit_transform(x_text)))
 
-max_document_length = config.FEATURE_LEN/config.CHAR_EBD_SIZE
+max_document_length = config.FEATURE_LEN
 # vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=config.ALPHABET,tokenizer_fn=list)
 vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, tokenizer_fn=list)#TODO  vocabularyBuilder contains full char defined in config ALPHABET
 x = np.array(list(vocab_processor.fit_transform(x_text)))
@@ -164,7 +164,7 @@ with tf.Graph().as_default():
             feed_dict = {
               cnn.input_x: x_batch,
               cnn.input_y: y_batch,
-              is_training: False
+              is_training: True
             }
 
             #   cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
