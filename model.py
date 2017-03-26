@@ -423,8 +423,8 @@ class VDCNN(object):
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
-        print self.embedded_chars
-        print self.embedded_chars_expanded
+        # print self.embedded_chars
+        # print self.embedded_chars_expanded
         # Temp Conv (in: batch, 1, 1014, 16)
         conv0 = _conv(x=self.embedded_chars_expanded, kernel=temp_kernel,
                       stride=stride, filters_out=num_filters1,name='conv0')
@@ -474,7 +474,7 @@ class VDCNN(object):
         # cantly superior to k-max pooling.
 
         max_pool = _max_pool(act132)
-        flatten = tf.reshape(max_pool, [-1, num_filters4])
+        flatten = tf.reshape(max_pool, [-1, 16* num_filters4])
 
         # Fully connected layers (fc)
         # fc1
