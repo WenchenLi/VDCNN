@@ -9,6 +9,9 @@ for Text Classification
 
 ## TODO
 
+1. evaluation part batch norm issue 
+
+
 ### pretrain
 - train char level nlp for english and chinese 
 
