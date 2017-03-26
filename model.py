@@ -391,6 +391,7 @@ class VDCNN(object):
         # vocab_size = 69# we use none atomic now
         embedding_size = 16
         temp_kernel = (3, embedding_size)
+        max_len = 1024/16 #1014
         kernel = (3, 1)
         stride = (2, 1)
         # kmax = 8
@@ -417,19 +418,19 @@ class VDCNN(object):
 
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
-            self.W = tf.Variable(
+            W = tf.Variable(
                 tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0),
                 name="W")#TODO char load embedding
-            self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
-            self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
-
+            embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
+            embedded_chars_expanded = tf.expand_dims(embedded_chars, -1)
+            embedded_1_channel = tf.reshape(embedded_chars_expanded,[-1,embedding_size*max_len,1,1])
         # print self.embedded_chars
         # print self.embedded_chars_expanded
         # Temp Conv (in: batch, 1, 1014, 16)
-        conv0 = _conv(x=self.embedded_chars_expanded, kernel=temp_kernel,
+        conv0 = _conv(x=embedded_1_channel, kernel=temp_kernel,
                       stride=stride, filters_out=num_filters1,name='conv0')
         act0 = activation(features=conv0, name='relu')
-        print act0
+        # print act0
         # CONVOLUTION_BLOCK (1 of 4) -> 64 FILTERS
         with tf.variable_scope('block1'):
             conv11 = _conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv11')
@@ -474,7 +475,7 @@ class VDCNN(object):
         # cantly superior to k-max pooling.
 
         max_pool = _max_pool(act132)
-        flatten = tf.reshape(max_pool, [-1, 16* num_filters4])
+        flatten = tf.reshape(max_pool, [-1, 2* num_filters4])#TODO figure out the correct multiplier
 
         # Fully connected layers (fc)
         # fc1
@@ -495,9 +496,9 @@ class VDCNN(object):
         # Accuracy
         predictions = tf.argmax(logits, 1, name="prediction")
         with tf.name_scope("accuracy"):
-            print predictions
-            print self.input_y #f.argmax(self.input_y, 1)
-            correct_predictions = tf.equal(logits, self.input_y)
+            # print predictions
+            # print self.input_y #f.argmax(self.input_y, 1)
+            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y,1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
 

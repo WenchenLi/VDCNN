@@ -164,7 +164,7 @@ with tf.Graph().as_default():
             feed_dict = {
               cnn.input_x: x_batch,
               cnn.input_y: y_batch,
-              is_training: True
+              is_training: False
             }
 
             #   cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
@@ -183,7 +183,7 @@ with tf.Graph().as_default():
             feed_dict = {
               cnn.input_x: x_batch,
               cnn.input_y: y_batch,
-              is_training:False
+              is_training:True
             }
             #   cnn.dropout_keep_prob: 1.0
             # }
