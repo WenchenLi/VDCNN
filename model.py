@@ -440,32 +440,104 @@ class VDCNN(object):
             norm12 = _bn(conv12, self.is_training,name='norm12')
             act12 = activation(features=norm12, name='relu')
 
+            conv21 = _conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv21')
+            norm21 = _bn(conv21, self.is_training, name='norm21')
+            act21 = activation(features=norm21, name='relu')
+            conv22 = _conv(x=act21, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv22')
+            norm22 = _bn(conv22, self.is_training, name='norm22')
+            act22 = activation(features=norm22, name='relu')
+
+            conv31 = _conv(x=act22, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv31')
+            norm31 = _bn(conv31, self.is_training, name='norm31')
+            act31 = activation(features=norm31, name='relu')
+            conv32 = _conv(x=act31, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv32')
+            norm32 = _bn(conv32, self.is_training, name='norm32')
+            act32 = activation(features=norm32, name='relu')
+
+            conv41 = _conv(x=act32, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv41')
+            norm41 = _bn(conv41, self.is_training, name='norm41')
+            act41 = activation(features=norm41, name='relu')
+            conv42 = _conv(x=act41, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv42')
+            norm42 = _bn(conv42, self.is_training, name='norm42')
+            act42 = activation(features=norm42, name='relu')
+
+            conv51 = _conv(x=act42, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv51')
+            norm51 = _bn(conv51, self.is_training, name='norm51')
+            act51 = activation(features=norm51, name='relu')
+            conv52 = _conv(x=act51, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv52')
+            norm52 = _bn(conv52, self.is_training, name='norm52')
+            act52 = activation(features=norm52, name='relu')
+
+
+
         # CONVOLUTION_BLOCK (2 of 4) -> 128 FILTERS
         with tf.variable_scope('block2'):
-            conv61 = _conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv61')
+            conv61 = _conv(x=act52, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv61')
             norm61 = _bn(conv61, self.is_training, name='norm61')
             act61 = activation(features=norm61, name='relu')
             conv62 = _conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv62')
             norm62 = _bn(conv62, self.is_training,name='norm62')
             act62 = activation(features=norm62, name='relu')
 
+            conv71 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv71')
+            norm71 = _bn(conv71, self.is_training, name='norm71')
+            act71 = activation(features=norm71, name='relu')
+            conv72 = _conv(x=act71, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv72')
+            norm72 = _bn(conv72, self.is_training, name='norm72')
+            act72 = activation(features=norm72, name='relu')
+
+            conv81 = _conv(x=act72, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv81')
+            norm81 = _bn(conv81, self.is_training, name='norm81')
+            act81 = activation(features=norm81, name='relu')
+            conv82 = _conv(x=act81, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv82')
+            norm82 = _bn(conv82, self.is_training, name='norm82')
+            act82 = activation(features=norm82, name='relu')
+
+            conv91 = _conv(x=act82, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv91')
+            norm91 = _bn(conv91, self.is_training, name='norm91')
+            act91 = activation(features=norm91, name='relu')
+            conv92 = _conv(x=act91, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv92')
+            norm92 = _bn(conv92, self.is_training, name='norm92')
+            act92 = activation(features=norm92, name='relu')
+
+            conv101 = _conv(x=act92, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv101')
+            norm101 = _bn(conv101, self.is_training, name='norm101')
+            act101 = activation(features=norm101, name='relu')
+            conv102 = _conv(x=act101, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv102')
+            norm102 = _bn(conv102, self.is_training, name='norm102')
+            act102 = activation(features=norm102, name='relu')
+
         # CONVOLUTION_BLOCK (3 of 4) -> 256 FILTERS
         with tf.variable_scope('block3'):
-            conv111 = _conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
+            conv111 = _conv(x=act102, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
             norm111 = _bn(conv111, self.is_training,name='norm111')
             act111 = activation(features=norm111, name='relu')
             conv112 = _conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3,name='conv112')
             norm112 = _bn(conv112, self.is_training, name='norm112')
             act112 = activation(features=norm112, name='relu')
 
+            conv121 = _conv(x=act102, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv121')
+            norm121 = _bn(conv121, self.is_training, name='norm121')
+            act121 = activation(features=norm121, name='relu')
+            conv122 = _conv(x=act121, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv122')
+            norm122 = _bn(conv122, self.is_training, name='norm122')
+            act122 = activation(features=norm122, name='relu')
+
         # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
         with tf.variable_scope('block4'):
-            conv131 = _conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv131')
+            conv131 = _conv(x=act122, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv131')
             norm131 = _bn(conv131, self.is_training,name='norm131')
             act131 = activation(features=norm131, name='relu')
             conv132 = _conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv132')
             norm132 = _bn(conv132, self.is_training,name='norm132')
             act132 = activation(features=norm132, name='relu')
+
+            conv141 = _conv(x=act132, kernel=kernel, stride=stride, filters_out=num_filters4, name='conv141')
+            norm141 = _bn(conv141, self.is_training, name='norm141')
+            act141 = activation(features=norm141, name='relu')
+            conv142 = _conv(x=act141, kernel=kernel, stride=stride, filters_out=num_filters4, name='conv142')
+            norm142 = _bn(conv142, self.is_training, name='norm142')
+            act142 = activation(features=norm142, name='relu')
 
         # K-max pooling (k=8) ? vs max pooling , according to paper,
         # Max-pooling performs better than other pool-
@@ -474,8 +546,8 @@ class VDCNN(object):
         # to convolutions with stride 2, but both are signifi-
         # cantly superior to k-max pooling.
 
-        max_pool = _max_pool(act132)
-        flatten = tf.reshape(max_pool, [-1, 2* num_filters4])#TODO figure out the correct multiplier
+        max_pool = _max_pool(act142)
+        flatten = tf.reshape(max_pool, [-1,  num_filters4])#TODO figure out the correct multiplier
 
         # Fully connected layers (fc)
         # fc1
