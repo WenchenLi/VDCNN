@@ -10,7 +10,10 @@ for Text Classification
 ## TODO
 
 1. evaluation part batch norm issue 
-
+2. add resume training
+3. hyper params
+4. pragmatically add blocks
+3. fold for dynamic graph
 
 ### pretrain
 - train char level nlp for english and chinese 
@@ -25,7 +28,3 @@ for Text Classification
 ![VDCNN](https://ai2-s2-public.s3.amazonaws.com/figures/2016-11-08/84ca430856a92000e90cd728445ca2241c10ddc3/2-Figure1-1.png)
 
 - different depth
-
-
-### additional features
-- fold (for dynamic computational graph)
