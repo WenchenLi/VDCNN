@@ -96,3 +96,5 @@ ENV/
 .ropeproject
 
 #data/
+.idea/workspace.xml
+runs/
