@@ -24,6 +24,7 @@ import util
 from model import VDCNN
 from tensorflow.contrib import learn
 import config
+import sys
 
 # Parameters
 # ==================================================
@@ -47,16 +48,24 @@ tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
+tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
+
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
+tf.flags.DEFINE_boolean("resume", True, "whether resume training from the previous checkpoints")
+tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir/1490631628/checkpoints",
+                       "checkpoint dir for model to resume training")
+tf.flags.DEFINE_string("model",'model-1500','saved model prefix to restore model from')
 
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
+
 print("\nParameters:")
 for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
+
 
 # Data Preparation
 # ==================================================
@@ -127,7 +136,7 @@ with tf.Graph().as_default():
 
         # Output directory for models and summaries
         timestamp = str(int(time.time()))
-        out_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
+        out_dir = os.path.abspath(os.path.join(os.path.curdir, FLAGS.TRAIN_DIR, timestamp))
         print("Writing to {}\n".format(out_dir))
 
         # Summaries for loss and accuracy
@@ -147,6 +156,7 @@ with tf.Graph().as_default():
         # Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
         checkpoint_dir = os.path.abspath(os.path.join(out_dir, "checkpoints"))
         checkpoint_prefix = os.path.join(checkpoint_dir, "model")
+        # print 'ckp prefix',checkpoint_prefix
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
@@ -155,7 +165,18 @@ with tf.Graph().as_default():
         vocab_processor.save(os.path.join(out_dir, "vocab"))
 
         # Initialize all variables
-        sess.run(tf.global_variables_initializer())
+
+        if FLAGS.resume:
+            latest = str(util.latest_checkpoint(FLAGS.CHECKPOINT_DIR))
+            if not latest:
+                print("No checkpoint to continue from in", latest)
+                sys.exit(1)
+            print("resume training", latest)
+
+            saver.restore(sess, latest)
+        else:
+            sess.run(tf.global_variables_initializer())
+
 
         def train_step(x_batch, y_batch):
             """
@@ -166,7 +187,6 @@ with tf.Graph().as_default():
               vdcnn.input_y: y_batch,
               is_training: True
             }
-
 
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
@@ -182,7 +202,7 @@ with tf.Graph().as_default():
             feed_dict = {
               vdcnn.input_x: x_batch,
               vdcnn.input_y: y_batch,
-              is_training:False
+              is_training: False
             }
 
             step, summaries, loss, accuracy = sess.run(

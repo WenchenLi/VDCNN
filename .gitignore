@@ -97,4 +97,4 @@ ENV/
 
 #data/
 .idea/workspace.xml
-runs/
+train_dir/
