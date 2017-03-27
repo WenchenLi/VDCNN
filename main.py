@@ -41,6 +41,7 @@ tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (d
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
+tf.flags.DEFINE_float("lr", 1e-3, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
@@ -110,7 +111,7 @@ with tf.Graph().as_default():
 
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(1e-3)
+        optimizer = tf.train.AdamOptimizer(FLAGS.lr)
         grads_and_vars = optimizer.compute_gradients(vdcnn.loss)
         train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -166,8 +167,7 @@ with tf.Graph().as_default():
               is_training: True
             }
 
-            #   vdcnn.dropout_keep_prob: FLAGS.dropout_keep_prob
-            # }
+
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
@@ -184,8 +184,7 @@ with tf.Graph().as_default():
               vdcnn.input_y: y_batch,
               is_training:False
             }
-            #   vdcnn.dropout_keep_prob: 1.0
-            # }
+
             step, summaries, loss, accuracy = sess.run(
                 [global_step, dev_summary_op, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
