@@ -144,7 +144,7 @@ def _bn(x, is_training,name):
     return x
 
 
-def _fc(x, units_out):
+def _fc(x, units_out,name):
 
     num_units_in = x.get_shape()[1]
     num_units_out = units_out
@@ -152,11 +152,11 @@ def _fc(x, units_out):
     weights_initializer = tf.truncated_normal_initializer(
         stddev=config.FC_WEIGHT_STDDEV)
 
-    weights = _get_variable(str(units_out)+'weights',
+    weights = _get_variable(name + str(units_out)+'weights',
                             shape=[num_units_in, num_units_out],
                             initializer=weights_initializer,
                             weight_decay=config.FC_WEIGHT_STDDEV)
-    biases = _get_variable(str(units_out)+'biases',
+    biases = _get_variable(name + str(units_out)+'biases',
                            shape=[num_units_out],
                            initializer=tf.zeros_initializer())
     x = tf.nn.xw_plus_b(x, weights, biases)
@@ -244,8 +244,8 @@ class VDCNN(object):
         num_filters3 = 256
         num_filters4 = 512
         activation = tf.nn.relu
-        fc1_hidden_size = 1024
-        fc2_hidden_size = 512
+        fc1_hidden_size = 2048
+        fc2_hidden_size = 2048
         num_output = 2
 
         self.is_training = tf.convert_to_tensor(is_training,
@@ -391,19 +391,19 @@ class VDCNN(object):
         # cantly superior to k-max pooling.
 
         max_pool = _max_pool(act132)
-        flatten = tf.reshape(max_pool, [-1,  128* num_filters4])#TODO figure out the correct multiplier
+        flatten = tf.reshape(max_pool, [-1,  s * num_filters4])#TODO figure out the correct multiplier
 
         # Fully connected layers (fc)
         # fc1
-        fc1 = _fc(flatten,fc1_hidden_size)
+        fc1 = _fc(flatten,fc1_hidden_size,'fc1')
         act_fc1 = activation(fc1)
 
         # fc2
-        fc2 = _fc(act_fc1,fc2_hidden_size)
+        fc2 = _fc(act_fc1,fc2_hidden_size,'fc2')
         act_fc2 = activation(fc2)
 
         # CalculateMean cross-entropy loss
-        logits = _fc(act_fc2, num_output)
+        logits = _fc(act_fc2, num_output,'softmax')
         with tf.name_scope("loss"):
             losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.input_y)
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
