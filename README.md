@@ -10,6 +10,7 @@ for Text Classification
 ## TODO
 
 1. evaluation part batch norm issue 
+2. add general data preprocessing `__SENTENCE__, __label__` as input 
 3. prototxt config
 4. add shortcut
 4. pragmatically add blocks
