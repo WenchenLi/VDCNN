@@ -17,7 +17,12 @@ special operations used in VDCNN,
 k_max_pool
 """
 import tensorflow as tf
+from tensorflow.python.training import moving_averages
+from tensorflow.python.ops import control_flow_ops
+import config
 
+RESNET_VARIABLES = 'vdcnn_variables'
+UPDATE_OPS_COLLECTION = 'vdcnn_update_ops'  # must be grouped with training op
 
 def _to_tensor(x, dtype):
     x = tf.convert_to_tensor(x)
@@ -68,7 +73,7 @@ def categorical_crossentropy(output, target, from_logits=False):
                                 reduction_indices=len(output.get_shape()) - 1,
                                 keep_dims=True)
         # manual computation of crossentropy
-        epsilon = _to_tensor(_EPSILON, output.dtype.base_dtype)
+        epsilon = _to_tensor(config._EPSILON, output.dtype.base_dtype)
         output = tf.clip_by_value(output, epsilon, 1. - epsilon)
         return - tf.reduce_sum(target * tf.log(output),
                                reduction_indices=len(output.get_shape()) - 1)
@@ -93,7 +98,113 @@ def concatenate(tensors, nm,axis=-1):
     return tf.concat(axis, tensors,name=nm)
 
 
-def _max_pool(x, ksize=3, stride=2):
+def batch_norm(x, is_training, name):
+    x_shape = x.get_shape()
+    params_shape = x_shape[-1:]
+
+    axis = list(range(len(x_shape) - 1))
+
+    beta = _get_variable('beta'+"_"+name,
+                         params_shape,
+                         initializer=tf.zeros_initializer())
+    gamma = _get_variable('gamma'+"_"+name,
+                          params_shape,
+                          initializer=tf.ones_initializer())
+
+    moving_mean = _get_variable('moving_mean'+"_"+name,
+                                params_shape,
+                                initializer=tf.zeros_initializer(),
+                                trainable=False)
+    moving_variance = _get_variable('moving_variance'+"_"+name,
+                                    params_shape,
+                                    initializer=tf.ones_initializer(),
+                                    trainable=False)
+
+    # These ops will only be preformed when training.
+    mean, variance = tf.nn.moments(x, axis)
+    update_moving_mean = moving_averages.assign_moving_average(moving_mean,
+                                                               mean, config.BN_DECAY)
+    update_moving_variance = moving_averages.assign_moving_average(
+        moving_variance, variance, config.BN_DECAY)
+    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
+    tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
+
+    mean, variance = control_flow_ops.cond(
+        is_training, lambda: (mean, variance),
+        lambda: (moving_mean, moving_variance))
+
+    x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, config.BN_EPSILON)
+
+    return x
+
+
+def fc(x, units_out, name):
+
+    num_units_in = x.get_shape()[1]
+    num_units_out = units_out
+
+    weights_initializer = tf.truncated_normal_initializer(
+        stddev=config.FC_WEIGHT_STDDEV)
+
+    weights = _get_variable(name + str(units_out)+'weights',
+                            shape=[num_units_in, num_units_out],
+                            initializer=weights_initializer,
+                            weight_decay=config.FC_WEIGHT_STDDEV)
+    biases = _get_variable(name + str(units_out)+'biases',
+                           shape=[num_units_out],
+                           initializer=tf.zeros_initializer())
+    x = tf.nn.xw_plus_b(x, weights, biases)
+
+    return x
+
+
+def _get_variable(name,
+                  shape,
+                  initializer,
+                  weight_decay=0.0,
+                  dtype='float',
+                  trainable=True):
+    """A little wrapper around tf.get_variable to
+     do weight decay and add to resnet collection"""
+
+    if weight_decay > 0:
+        regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
+    else:
+        regularizer = None
+    collections = [tf.GraphKeys.GLOBAL_VARIABLES, RESNET_VARIABLES]
+    return tf.get_variable(name,
+                           shape=shape,
+                           initializer=initializer,
+                           dtype=dtype,
+                           regularizer=regularizer,
+                           collections=collections,
+                           trainable=trainable)
+
+
+def _conv(x, kernel,stride,filters_out,name):
+    # ksize = c['ksize']
+    # stride = c['stride']
+    # filters_out = c['conv_filters_out']
+
+    """
+    :param x:
+    :param temp_kernel:
+    :param stride:
+    :param filters_out:
+    :return:
+    """
+    filters_in = x.get_shape()[-1]
+    shape = [kernel[0], kernel[1], filters_in, filters_out]
+    initializer = tf.truncated_normal_initializer(stddev=config.CONV_WEIGHT_STDDEV)
+    weights = _get_variable('weights'+"_"+name,
+                            shape=shape,
+                            dtype='float',
+                            initializer=initializer,
+                            weight_decay=config.CONV_WEIGHT_DECAY)
+    return tf.nn.conv2d(x, weights, [1, stride[0], stride[1], 1], padding='SAME')
+
+
+def _max_pool(x, ksize=1, stride=1):
     return tf.nn.max_pool(x,
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
