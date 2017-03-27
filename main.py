@@ -75,12 +75,7 @@ print("Loading data...")
 x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
 
 # Build vocabulary
-# max_document_length = max([len(x.split(" ")) for x in x_text])
-# vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-# x = np.array(list(vocab_processor.fit_transform(x_text)))
-
 max_document_length = config.FEATURE_LEN
-# vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=config.ALPHABET,tokenizer_fn=list)
 vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, tokenizer_fn=list)#TODO  vocabularyBuilder contains full char defined in config ALPHABET
 x = np.array(list(vocab_processor.fit_transform(x_text)))
 
@@ -111,7 +106,7 @@ with tf.Graph().as_default():
 
     with sess.as_default():
         vdcnn = VDCNN(
-            sequence_length=x_train.shape[1], #x_train.shape[1]
+            sequence_length=x_train.shape[1],
             num_classes=y_train.shape[1],
             vocab_size=len(vocab_processor.vocabulary_),
             embedding_size=FLAGS.embedding_dim,
@@ -164,15 +159,13 @@ with tf.Graph().as_default():
         # Write vocabulary
         vocab_processor.save(os.path.join(out_dir, "vocab"))
 
-        # Initialize all variables
-
+        # resume or Initialize all variables to train from scratch
         if FLAGS.resume:
             latest = str(util.latest_checkpoint(FLAGS.CHECKPOINT_DIR))
             if not latest:
                 print("No checkpoint to continue from in", latest)
                 sys.exit(1)
             print("resume training", latest)
-
             saver.restore(sess, latest)
         else:
             sess.run(tf.global_variables_initializer())
