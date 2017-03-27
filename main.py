@@ -117,20 +117,22 @@ with tf.Graph().as_default():
             is_training=is_training)
 
         # Define Training procedure
+        # global_step = tf.Variable(0, name="global_step", trainable=False)
+        # optimizer = tf.train.AdamOptimizer(FLAGS.lr)
+        # grads_and_vars = optimizer.compute_gradients(vdcnn.loss)
+        # train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(FLAGS.lr)
-        grads_and_vars = optimizer.compute_gradients(vdcnn.loss)
-        train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+        train_ops = vdcnn.build_train_op(FLAGS.lr,global_step)
 
         # Keep track of gradient values and sparsity (optional)
-        grad_summaries = []
-        for g, v in grads_and_vars:
-            if g is not None:
-                grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
-                sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
-                grad_summaries.append(grad_hist_summary)
-                grad_summaries.append(sparsity_summary)
-        grad_summaries_merged = tf.summary.merge(grad_summaries)
+        # grad_summaries = []
+        # for g, v in grads_and_vars:
+        #     if g is not None:
+        #         grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
+        #         sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
+        #         grad_summaries.append(grad_hist_summary)
+        #         grad_summaries.append(sparsity_summary)
+        # grad_summaries_merged = tf.summary.merge(grad_summaries)
 
         # Output directory for models and summaries
         timestamp = str(int(time.time()))
@@ -142,7 +144,7 @@ with tf.Graph().as_default():
         acc_summary = tf.summary.scalar("accuracy", vdcnn.accuracy)
 
         # Train Summaries
-        train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
+        # train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
         train_summary_dir = os.path.join(out_dir, "summaries", "train")
         train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
@@ -183,12 +185,14 @@ with tf.Graph().as_default():
               is_training: True
             }
 
-            _, step, summaries, loss, accuracy = sess.run(
-                [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
+            _, step , loss, accuracy = sess.run(
+                # [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
+                # feed_dict)
+                [train_ops, global_step, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            train_summary_writer.add_summary(summaries, step)
+            # train_summary_writer.add_summary(summaries, step)
 
         def dev_step(x_batch, y_batch, writer=None):
             """
@@ -238,7 +242,7 @@ with tf.Graph().as_default():
             if current_step % FLAGS.evaluate_every == 0:
                 print("\nEvaluation:")
                 dev_step(x_dev, y_dev, writer=dev_summary_writer)
-                print("")
+                print("----------------------------------------")
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))

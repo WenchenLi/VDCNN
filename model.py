@@ -25,84 +25,14 @@ New NLP architecture:
 import tensorflow as tf
 import numpy as np
 import config
-import ops
+# import ops
 from config import FEATURE_LEN
-
+from tensorflow.python.training import moving_averages
+from tensorflow.python.ops import control_flow_ops
 FLAGS = tf.app.flags.FLAGS
 
-
-# class Config:
-#     def __init__(self):
-#         root = self.Scope('')
-#         for k, v in FLAGS.__dict__['__flags'].iteritems():
-#             root[k] = v
-#         self.stack = [ root ]
-#
-#     def iteritems(self):
-#         return self.to_dict().iteritems()
-#
-#     def to_dict(self):
-#         self._pop_stale()
-#         out = {}
-#         # Work backwards from the flags to top fo the stack
-#         # overwriting keys that were found earlier.
-#         for i in range(len(self.stack)):
-#             cs = self.stack[-i]
-#             for name in cs:
-#                 out[name] = cs[name]
-#         return out
-#
-#     def _pop_stale(self):
-#         var_scope_name = tf.get_variable_scope().name
-#         top = self.stack[0]
-#         while not top.contains(var_scope_name):
-#             # We aren't in this scope anymore
-#             self.stack.pop(0)
-#             top = self.stack[0]
-#
-#     def __getitem__(self, name):
-#         self._pop_stale()
-#         # Recursively extract value
-#         for i in range(len(self.stack)):
-#             cs = self.stack[i]
-#             if name in cs:
-#                 return cs[name]
-#
-#         raise KeyError(name)
-#
-#     def set_default(self, name, value):
-#         if not name in self:
-#             self[name] = value
-#
-#     def __contains__(self, name):
-#         self._pop_stale()
-#         for i in range(len(self.stack)):
-#             cs = self.stack[i]
-#             if name in cs:
-#                 return True
-#         return False
-#
-#     def __setitem__(self, name, value):
-#         self._pop_stale()
-#         top = self.stack[0]
-#         var_scope_name = tf.get_variable_scope().name
-#         assert top.contains(var_scope_name)
-#
-#         if top.name != var_scope_name:
-#             top = self.Scope(var_scope_name)
-#             self.stack.insert(0, top)
-#
-#         top[name] = value
-#
-#     class Scope(dict):
-#         def __init__(self, name):
-#             self.name = name
-#
-#         def contains(self, var_scope_name):
-#             return var_scope_name.startswith(self.name)
-
-
-
+VDCNN_VARIABLES = 'vdcnn_variables'
+UPDATE_OPS_COLLECTION = 'vdcnn_update_ops'  # must be grouped with training op
 
 
 class VDCNN(object):
@@ -133,6 +63,7 @@ class VDCNN(object):
         fc2_hidden_size = 512
         num_output = 2
 
+
         self.is_training = tf.convert_to_tensor(is_training,
                                             dtype='bool',
                                             name='is_training')
@@ -143,7 +74,8 @@ class VDCNN(object):
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
-
+        # self.loss = .0
+        self._extra_train_ops = []
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
             W = tf.Variable(
@@ -154,17 +86,17 @@ class VDCNN(object):
             embedded_f0_channel = tf.reshape(embedded_chars_expanded,[-1,f0,s,embedding_size])
 
         # Temp Conv (in: batch, 1, 1014, 16)
-        conv0 = ops._conv(x=embedded_f0_channel, kernel=temp_kernel,
+        conv0 = self._conv(x=embedded_f0_channel, kernel=temp_kernel,
                       stride=stride, filters_out=num_filters1,name='conv0')
         act0 = activation(features=conv0, name='relu')
 
         # CONVOLUTION_BLOCK (1 of 4) -> 64 FILTERS
         with tf.variable_scope('block1'):
-            conv11 = ops._conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv11')
-            norm11 = ops.batch_norm(conv11, self.is_training, name='norm11')
+            conv11 = self._conv(x=act0, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv11')
+            norm11 = self._batch_norm(conv11, self.is_training, name='norm11')
             act11 = activation(features=norm11, name='relu')
-            conv12 = ops._conv(x=act11, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv12')
-            norm12 = ops.batch_norm(conv12, self.is_training, name='norm12')
+            conv12 = self._conv(x=act11, kernel=kernel, stride=stride,filters_out=num_filters1,name='conv12')
+            norm12 = self._batch_norm(conv12, self.is_training, name='norm12')
             act12 = activation(features=norm12, name='relu')
 
             # conv21 = ops._conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters1, name='conv21')
@@ -199,11 +131,11 @@ class VDCNN(object):
 
         # CONVOLUTION_BLOCK (2 of 4) -> 128 FILTERS
         with tf.variable_scope('block2'):
-            conv61 = ops._conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv61')
-            norm61 = ops.batch_norm(conv61, self.is_training, name='norm61')
+            conv61 = self._conv(x=act12, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv61')
+            norm61 = self._batch_norm(conv61, self.is_training, name='norm61')
             act61 = activation(features=norm61, name='relu')
-            conv62 = ops._conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv62')
-            norm62 = ops.batch_norm(conv62, self.is_training, name='norm62')
+            conv62 = self._conv(x=act61, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv62')
+            norm62 = self._batch_norm(conv62, self.is_training, name='norm62')
             act62 = activation(features=norm62, name='relu')
 
             # conv71 = ops._conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv71')
@@ -236,27 +168,27 @@ class VDCNN(object):
 
         # CONVOLUTION_BLOCK (3 of 4) -> 256 FILTERS
         with tf.variable_scope('block3'):
-            conv111 = ops._conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
-            norm111 = ops.batch_norm(conv111, self.is_training, name='norm111')
+            conv111 = self._conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
+            norm111 = self._batch_norm(conv111, self.is_training, name='norm111')
             act111 = activation(features=norm111, name='relu')
-            conv112 = ops._conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3,name='conv112')
-            norm112 = ops.batch_norm(conv112, self.is_training, name='norm112')
+            conv112 = self._conv(x=act111, kernel=kernel, stride=stride, filters_out=num_filters3,name='conv112')
+            norm112 = self._batch_norm(conv112, self.is_training, name='norm112')
             act112 = activation(features=norm112, name='relu')
 
-            # conv121 = ops._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv121')
-            # norm121 = ops._bn(conv121, self.is_training, name='norm121')
+            # conv121 = self._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv121')
+            # norm121 = self._bn(conv121, self.is_training, name='norm121')
             # act121 = activation(features=norm121, name='relu')
-            # conv122 = ops._conv(x=act121, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv122')
-            # norm122 = ops._bn(conv122, self.is_training, name='norm122')
+            # conv122 = self._conv(x=act121, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv122')
+            # norm122 = self._bn(conv122, self.is_training, name='norm122')
             # act122 = activation(features=norm122, name='relu')
 
         # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
         with tf.variable_scope('block4'):
-            conv131 = ops._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv131')
-            norm131 = ops.batch_norm(conv131, self.is_training, name='norm131')
+            conv131 = self._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv131')
+            norm131 = self._batch_norm(conv131, self.is_training, name='norm131')
             act131 = activation(features=norm131, name='relu')
-            conv132 = ops._conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv132')
-            norm132 = ops.batch_norm(conv132, self.is_training, name='norm132')
+            conv132 = self._conv(x=act131, kernel=kernel, stride=stride, filters_out=num_filters4,name='conv132')
+            norm132 = self._batch_norm(conv132, self.is_training, name='norm132')
             act132 = activation(features=norm132, name='relu')
 
             # conv141 = ops._conv(x=act132, kernel=kernel, stride=stride, filters_out=num_filters4, name='conv141')
@@ -273,20 +205,20 @@ class VDCNN(object):
         # to convolutions with stride 2, but both are signifi-
         # cantly superior to k-max pooling.
 
-        max_pool = ops._max_pool(act132)
+        max_pool = self._max_pool(act132)
         flatten = tf.reshape(max_pool, [-1,  s * num_filters4])#TODO figure out the correct multiplier
 
         # Fully connected layers (fc)
         # fc1
-        fc1 = ops.fc(flatten, fc1_hidden_size, 'fc1')
+        fc1 = self._fc(flatten, fc1_hidden_size, 'fc1')
         act_fc1 = activation(fc1)
 
         # fc2
-        fc2 = ops.fc(act_fc1, fc2_hidden_size, 'fc2')
+        fc2 = self._fc(act_fc1, fc2_hidden_size, 'fc2')
         act_fc2 = activation(fc2)
 
         # CalculateMean cross-entropy loss
-        logits = ops.fc(act_fc2, num_output, 'softmax')
+        logits = self._fc(act_fc2, num_output, 'softmax')
         with tf.name_scope("loss"):
             losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.input_y)
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
@@ -297,6 +229,140 @@ class VDCNN(object):
             correct_predictions = tf.equal(predictions, tf.argmax(self.input_y,1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
+
+    def build_train_op(self,lr,global_step):
+        """Build training specific ops for the graph."""
+        tf.summary.scalar('learning_rate', lr)
+
+        trainable_variables = tf.trainable_variables()
+        # grads = tf.gradients(self.loss, trainable_variables)
+
+        # if self.hps.optimizer == 'sgd':
+        #     optimizer = tf.train.GradientDescentOptimizer(lr)
+        # elif self.hps.optimizer == 'mom':
+        #     optimizer = tf.train.MomentumOptimizer(lr, 0.9)
+        #
+        # apply_op = optimizer.apply_gradients(
+        #     zip(grads, trainable_variables),
+        #     global_step=self.global_step, name='train_step')
+
+        optimizer = tf.train.AdamOptimizer(FLAGS.lr)
+        grads_and_vars = optimizer.compute_gradients(self.loss)
+        optimizer_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+
+        train_ops = [optimizer_op] + self._extra_train_ops
+        return tf.group(*train_ops)
+
+    def _fc(self,x, units_out, name):
+
+        num_units_in = x.get_shape()[1]
+        num_units_out = units_out
+
+        weights_initializer = tf.truncated_normal_initializer(
+            stddev=config.FC_WEIGHT_STDDEV)
+
+        weights = self._get_variable(name + str(units_out) + 'weights',
+                                shape=[num_units_in, num_units_out],
+                                initializer=weights_initializer,
+                                weight_decay=config.FC_WEIGHT_STDDEV)
+        biases = self._get_variable(name + str(units_out) + 'biases',
+                               shape=[num_units_out],
+                               initializer=tf.zeros_initializer())
+        x = tf.nn.xw_plus_b(x, weights, biases)
+
+        return x
+
+    def _get_variable(self,
+                      name,
+                      shape,
+                      initializer,
+                      weight_decay=0.0,
+                      dtype='float',
+                      trainable=True):
+        """A little wrapper around tf.get_variable to
+         do weight decay and add to resnet collection"""
+
+        if weight_decay > 0:
+            regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
+        else:
+            regularizer = None
+        collections = [tf.GraphKeys.GLOBAL_VARIABLES, VDCNN_VARIABLES]
+        return tf.get_variable(name,
+                               shape=shape,
+                               initializer=initializer,
+                               dtype=dtype,
+                               regularizer=regularizer,
+                               collections=collections,
+                               trainable=trainable)
+
+    def _conv(self,x, kernel, stride, filters_out, name):
+        # ksize = c['ksize']
+        # stride = c['stride']
+        # filters_out = c['conv_filters_out']
+
+        """
+        :param x:
+        :param temp_kernel:
+        :param stride:
+        :param filters_out:
+        :return:
+        """
+        filters_in = x.get_shape()[-1]
+        shape = [kernel[0], kernel[1], filters_in, filters_out]
+        initializer = tf.truncated_normal_initializer(stddev=config.CONV_WEIGHT_STDDEV)
+        weights = self._get_variable('weights' + "_" + name,
+                                shape=shape,
+                                dtype='float',
+                                initializer=initializer,
+                                weight_decay=config.CONV_WEIGHT_DECAY)
+        return tf.nn.conv2d(x, weights, [1, stride[0], stride[1], 1], padding='SAME')
+
+    def _max_pool(self,x, ksize=1, stride=1):
+        return tf.nn.max_pool(x,
+                              ksize=[1, ksize, ksize, 1],
+                              strides=[1, stride, stride, 1],
+                              padding='VALID')
+
+    def _batch_norm(self,x, is_training, name):
+        x_shape = x.get_shape()
+        params_shape = x_shape[-1:]
+
+        axis = list(range(len(x_shape) - 1))
+
+        beta = self._get_variable('beta' + "_" + name,
+                             params_shape,
+                             initializer=tf.zeros_initializer())
+        gamma = self._get_variable('gamma' + "_" + name,
+                              params_shape,
+                              initializer=tf.ones_initializer())
+
+        moving_mean = self._get_variable('moving_mean' + "_" + name,
+                                    params_shape,
+                                    initializer=tf.zeros_initializer(),
+                                    trainable=False)
+        moving_variance = self._get_variable('moving_variance' + "_" + name,
+                                        params_shape,
+                                        initializer=tf.ones_initializer(),
+                                        trainable=False)
+
+        # These ops will only be preformed when training.
+        mean, variance = tf.nn.moments(x, axis)
+        update_moving_mean = moving_averages.assign_moving_average(moving_mean,
+                                                                   mean, config.BN_DECAY)
+        update_moving_variance = moving_averages.assign_moving_average(
+            moving_variance, variance, config.BN_DECAY)
+        # tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
+        # tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
+        self._extra_train_ops.append(update_moving_mean)
+        self._extra_train_ops.append(update_moving_variance)
+
+        mean, variance = control_flow_ops.cond(
+            is_training, lambda: (mean, variance),
+            lambda: (moving_mean, moving_variance))
+
+        x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, config.BN_EPSILON)
+
+        return x
 
 class TextCNN(object):
     """
