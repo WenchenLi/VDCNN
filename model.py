@@ -117,11 +117,10 @@ class VDCNN(object):
             is_training,
             l2_reg_lambda=0.0):
 
-        s = FEATURE_LEN
+        s = FEATURE_LEN#1014 vs 1024 ?
         f0 = 1
         embedding_size = 16
         temp_kernel = (3, embedding_size)
-        max_len = s/16 #1014 vs 1024 ?
         kernel = (3, 1)
         stride = (2, 1)
         # kmax = 8

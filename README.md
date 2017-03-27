@@ -10,8 +10,7 @@ for Text Classification
 ## TODO
 
 1. evaluation part batch norm issue 
-2. add resume training
-3. hyper params
+3. prototxt config
 4. add shortcut
 4. pragmatically add blocks
 3. fold for dynamic graph
