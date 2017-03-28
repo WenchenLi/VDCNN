@@ -73,7 +73,9 @@ print("")
 
 # Load data
 print("Loading data...")
-x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
+# x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
+x_text, y, index2label = util.load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
+
 
 # Build vocabulary
 max_document_length = config.FEATURE_LEN

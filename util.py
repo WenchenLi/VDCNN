@@ -29,6 +29,8 @@ import re
 import itertools
 from collections import Counter
 
+LABEL_start = '__label__'
+
 
 def clean_str(string):
     """
@@ -58,17 +60,59 @@ def load_data_and_labels_fasttext(data_file):
     :return: 
     """
     # Load data from files
-
     examples = list(open(data_file, "r").readlines())
-    examples = [s.strip() for s in examples]
+
+    def get_strip_sentence_and_label_dict():
+        index2label = []
+        label2index = {}
+        check_label_exists = {}
+        current_label_index = 0
+
+        labels = []
+        examples_sentences = []
+
+        for e in examples:
+            label_start_index = e.find(LABEL_start)
+            current_label = e[label_start_index:]
+            labels.append(current_label)
+
+            examples_sentences.append(e[:label_start_index].strip())
+
+            if current_label not in check_label_exists:
+                check_label_exists[current_label] = 1
+                index2label.append(current_label)
+                label2index[current_label] = current_label_index
+                current_label_index += 1
+            else:
+                continue
+
+        return examples_sentences, labels, index2label,label2index
+
+    def onehot_encode(label):
+        """
+        encode label to one hot vector
+        :param label: 
+        :return: one hot vector
+        """
+        index = label2index[label]
+        vector = [0] * num_unique_labels
+        vector[index] = 1
+        return vector
+
+    examples_sentences, labels, index2label, label2index = get_strip_sentence_and_label_dict()
+    num_unique_labels = len(index2label)
+
+
+
     # Split by words, trim to FEATURE_LEN chars
-    x_text = examples
+    x_text = examples_sentences
     x_text = [clean_str(sent) for sent in x_text]
     x_text = [list(sentence.lower())[:FEATURE_LEN] for sentence in x_text]
     # Generate labels
-    labels = [[1, 0] for _ in examples] #use one hot for each label
-    y = np.concatenate([labels, labels], 0)
-    return [x_text, y]
+    labels = [onehot_encode(l) for l in labels] #use one hot for each label
+    y = np.array(labels)
+    # y = np.concatenate([labels, labels], 0)
+    return [x_text, y,index2label]
 
 
 def load_data_and_labels(positive_data_file, negative_data_file):
@@ -98,7 +142,7 @@ def load_data_and_labels_change(positive_data_file, negative_data_file):
     Returns split sentences and labels.
     """
     with open("rt_data_all.txt", 'w') as f:
-        LABEL_start = '__label__'
+
 
         # Load data from files
         positive_examples = list(open(positive_data_file, "r").readlines())
@@ -158,6 +202,7 @@ def latest_checkpoint(checkpoint_dir, latest_filename=None):
     # return None
 
 if __name__=="__main__":
-    p= '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.pos'
-    n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
-    load_data_and_labels_change(p,n)
+    # p= '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.pos'
+    # n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
+    # load_data_and_labels_change(p,n)
+    load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
