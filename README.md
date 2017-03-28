@@ -1,4 +1,5 @@
 # VDCNN
+
 tensorflow implementation of Very Deep Convolutional Networks
 for Text Classification
 
@@ -10,6 +11,7 @@ for Text Classification
 ## TODO
 
 2. add general data preprocessing `__SENTENCE__, __label__` as input 
+3. predictor
 3. prototxt config
 4. pragmatically add blocks
 
