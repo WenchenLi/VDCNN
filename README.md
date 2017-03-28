@@ -9,15 +9,14 @@ for Text Classification
 ```
 
 ## TODO
-
-2. add general data preprocessing `__SENTENCE__, __label__` as input 
-3. predictor
-3. prototxt config
-4. pragmatically add blocks
+1. a benchmark datasets shows it's working
+1. predictor
+2. prototxt config
+3. pragmatically add blocks
 
 4. add shortcut
 5. add kMaxPooling
-3. fold for dynamic graph
+6. fold for dynamic graph
 
 
 ### pretrain
