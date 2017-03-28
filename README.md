@@ -50,3 +50,6 @@ as shows in the table, k max pooling not always helps, so keep to max pooling fo
 above Table : Testing error of our models on the 8 data sets. The deeper the networks the lower the error for all pooling types. No data preprocessing or augmentation is used.
  
  
+# reference
+
+[1][Conneau, Alexis et al. “Very Deep Convolutional Networks for Natural Language Processing.” CoRR abs/1606.01781 (2016): n. pag.](https://pdfs.semanticscholar.org/f797/fd44b9ddd5845611eb7a705ca9464a8819d1.pdf?_ga=1.122241998.496193353.1486868690)
