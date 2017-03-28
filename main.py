@@ -32,8 +32,7 @@ import sys
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .2, "Percentage of the training data to use for validation")
 tf.flags.DEFINE_float("test_sample_percentage", .2, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
-tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
+tf.flags.DEFINE_string("data_file", "./data/rt-polaritydata/rt_data_all.txt", "Data source")
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
@@ -74,8 +73,8 @@ print("")
 # Load data
 print("Loading data...")
 # x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
-x_text, y, index2label = util.load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
-
+x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.data_file)
+#TODO index2label used for predict
 
 # Build vocabulary
 max_document_length = config.FEATURE_LEN
