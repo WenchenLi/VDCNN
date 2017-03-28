@@ -72,7 +72,6 @@ print("")
 
 # Load data
 print("Loading data...")
-# x_text, y = util.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
 x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.data_file)
 #TODO index2label used for predict
 
@@ -118,22 +117,8 @@ with tf.Graph().as_default():
             is_training=is_training)
 
         # Define Training procedure
-        # global_step = tf.Variable(0, name="global_step", trainable=False)
-        # optimizer = tf.train.AdamOptimizer(FLAGS.lr)
-        # grads_and_vars = optimizer.compute_gradients(vdcnn.loss)
-        # train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
         global_step = tf.Variable(0, name="global_step", trainable=False)
         train_ops = vdcnn.build_train_op(FLAGS.lr,global_step)
-
-        # Keep track of gradient values and sparsity (optional)
-        # grad_summaries = []
-        # for g, v in grads_and_vars:
-        #     if g is not None:
-        #         grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
-        #         sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
-        #         grad_summaries.append(grad_hist_summary)
-        #         grad_summaries.append(sparsity_summary)
-        # grad_summaries_merged = tf.summary.merge(grad_summaries)
 
         # Output directory for models and summaries
         timestamp = str(int(time.time()))
@@ -145,7 +130,6 @@ with tf.Graph().as_default():
         acc_summary = tf.summary.scalar("accuracy", vdcnn.accuracy)
 
         # Train Summaries
-        # train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
         train_summary_dir = os.path.join(out_dir, "summaries", "train")
         train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
@@ -186,7 +170,7 @@ with tf.Graph().as_default():
               is_training: True
             }
 
-            _, step , loss, accuracy = sess.run(
+            _, step, loss, accuracy = sess.run(
                 # [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
                 # feed_dict)
                 [train_ops, global_step, vdcnn.loss, vdcnn.accuracy],

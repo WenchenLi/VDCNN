@@ -204,7 +204,6 @@ class VDCNN(object):
         # that max-pooling performs best overall, very close
         # to convolutions with stride 2, but both are signifi-
         # cantly superior to k-max pooling.
-
         max_pool = self._max_pool(act132)
         flatten = tf.reshape(max_pool, [-1,  s * num_filters4])#TODO figure out the correct multiplier
 
@@ -296,10 +295,6 @@ class VDCNN(object):
                                trainable=trainable)
 
     def _conv(self,x, kernel, stride, filters_out, name):
-        # ksize = c['ksize']
-        # stride = c['stride']
-        # filters_out = c['conv_filters_out']
-
         """
         :param x:
         :param temp_kernel:
@@ -315,6 +310,7 @@ class VDCNN(object):
                                 dtype='float',
                                 initializer=initializer,
                                 weight_decay=config.CONV_WEIGHT_DECAY)
+
         return tf.nn.conv2d(x, weights, [1, stride[0], stride[1], 1], padding='SAME')
 
     def _max_pool(self,x, ksize=1, stride=1):
@@ -351,8 +347,6 @@ class VDCNN(object):
                                                                    mean, config.BN_DECAY)
         update_moving_variance = moving_averages.assign_moving_average(
             moving_variance, variance, config.BN_DECAY)
-        # tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_mean)
-        # tf.add_to_collection(UPDATE_OPS_COLLECTION, update_moving_variance)
         self._extra_train_ops.append(update_moving_mean)
         self._extra_train_ops.append(update_moving_variance)
 
