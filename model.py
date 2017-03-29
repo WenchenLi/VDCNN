@@ -85,7 +85,8 @@ class VDCNN(object):
             embedded_chars_expanded = tf.expand_dims(embedded_chars, -1)
             embedded_f0_channel = tf.reshape(embedded_chars_expanded,[-1,f0,s,embedding_size])
 
-        # Temp Conv (in: batch, 1, 1014, 16)
+    # with tf.device('/gpu:0'):
+        # Temp Conv (in: batch, fo, FEATURE_LEN, embd_size)
         conv0 = self._conv(x=embedded_f0_channel, kernel=temp_kernel,
                       stride=stride, filters_out=num_filters1,name='conv0')
         act0 = activation(features=conv0, name='relu')
@@ -165,7 +166,7 @@ class VDCNN(object):
             # conv102 = ops._conv(x=act101, kernel=kernel, stride=stride, filters_out=num_filters2, name='conv102')
             # norm102 = ops._bn(conv102, self.is_training, name='norm102')
             # act102 = activation(features=norm102, name='relu')
-
+    # with tf.device("/gpu:1"):
         # CONVOLUTION_BLOCK (3 of 4) -> 256 FILTERS
         with tf.variable_scope('block3'):
             conv111 = self._conv(x=act62, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv111')
@@ -175,12 +176,13 @@ class VDCNN(object):
             norm112 = self._batch_norm(conv112, self.is_training, name='norm112')
             act112 = activation(features=norm112, name='relu')
 
-            # conv121 = self._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv121')
-            # norm121 = self._bn(conv121, self.is_training, name='norm121')
-            # act121 = activation(features=norm121, name='relu')
-            # conv122 = self._conv(x=act121, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv122')
-            # norm122 = self._bn(conv122, self.is_training, name='norm122')
-            # act122 = activation(features=norm122, name='relu')
+        # conv121 = self._conv(x=act112, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv121')
+        # norm121 = self._bn(conv121, self.is_training, name='norm121')
+        # act121 = activation(features=norm121, name='relu')
+        # conv122 = self._conv(x=act121, kernel=kernel, stride=stride, filters_out=num_filters3, name='conv122')
+        # norm122 = self._bn(conv122, self.is_training, name='norm122')
+        # act122 = activation(features=norm122, name='relu')
+
 
         # CONVOLUTION_BLOCK (4 of 4) -> 512 FILTERS
         with tf.variable_scope('block4'):
