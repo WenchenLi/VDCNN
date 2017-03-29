@@ -21,7 +21,7 @@ import pandas as pd
 import functools
 import threading
 import Queue
-from config import FEATURE_LEN, BATCH_SIZE
+from config import FEATURE_LEN
 import tensorflow as tf
 
 import numpy as np

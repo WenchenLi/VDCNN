@@ -30,10 +30,11 @@ import sys
 # ==================================================
 
 # Data loading params
-tf.flags.DEFINE_float("dev_sample_percentage", .2, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("data_file", "./data/sogou_news_csv/sogou_data_train_dev.txt", "Data source")
-
+tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
+tf.flags.DEFINE_float("test_sample_percentage", .1, "Percentage of the training data to use for test")
+tf.flags.DEFINE_string("data_file", "./data/rt-polaritydata/rt_data_all.txt", "Data source")
+#rt-polaritydata/rt_data_all.txt
+#sogou_news_csv/sogou_data_train_dev.txt
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
@@ -73,9 +74,15 @@ print("Loading data...")
 x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.data_file)
 #TODO index2label used for predict
 
-# Build vocabulary
+# Build vocabulary and transform the corpus
+
+vocabulary = learn.preprocessing.CategoricalVocabulary()
+for token in config.ALPHABET:
+    vocabulary.add(token)
+vocabulary.freeze()
+
 max_document_length = config.FEATURE_LEN
-vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, tokenizer_fn=list)#TODO  vocabularyBuilder contains full char defined in config ALPHABET
+vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)#TODO  vocabularyBuilder contains full char defined in config ALPHABET
 x = np.array(list(vocab_processor.fit_transform(x_text)))
 
 # Randomly shuffle data
@@ -131,11 +138,6 @@ with tf.Graph().as_default():
         train_summary_dir = os.path.join(out_dir, "summaries", "train")
         train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
-        # Dev summaries
-        dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
-        dev_summary_dir = os.path.join(out_dir, "summaries", "dev")
-        dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
-
         # Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
         checkpoint_dir = os.path.abspath(os.path.join(out_dir, "checkpoints"))
         checkpoint_prefix = os.path.join(checkpoint_dir, "model")
@@ -169,13 +171,10 @@ with tf.Graph().as_default():
             }
 
             _, step, loss, accuracy = sess.run(
-                # [train_op, global_step, train_summary_op, vdcnn.loss, vdcnn.accuracy],
-                # feed_dict)
                 [train_ops, global_step, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            # train_summary_writer.add_summary(summaries, step)
 
         def dev_step(x_batch, y_batch, writer=None):
             """
@@ -187,13 +186,13 @@ with tf.Graph().as_default():
               is_training: False
             }
 
-            step, summaries, loss, accuracy = sess.run(
-                [global_step, dev_summary_op, vdcnn.loss, vdcnn.accuracy],
+            step, loss, accuracy = sess.run(
+                [global_step, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            if writer:
-                writer.add_summary(summaries, step)
+            # if writer:
+            #     writer.add_summary(summaries, step)
 
         def do_test(x_batch, y_batch, writer=None):
             """
@@ -205,13 +204,13 @@ with tf.Graph().as_default():
                 is_training: False
             }
 
-            step, summaries, loss, accuracy = sess.run(
-                [global_step, dev_summary_op, vdcnn.loss, vdcnn.accuracy],
+            step, loss, accuracy = sess.run(
+                [global_step, vdcnn.loss, vdcnn.accuracy],
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            if writer:
-                writer.add_summary(summaries, step)
+            # if writer:
+            #     writer.add_summary(summaries, step)
 
         # Generate batches
         batches = util.batch_iter(
@@ -224,7 +223,7 @@ with tf.Graph().as_default():
             current_step = tf.train.global_step(sess, global_step)
             if current_step % FLAGS.evaluate_every == 0:
                 print("\nEvaluation:")
-                dev_step(x_dev, y_dev, writer=dev_summary_writer)
+                dev_step(x_dev, y_dev)
                 print("----------------------------------------")
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)

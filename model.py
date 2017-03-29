@@ -62,7 +62,6 @@ class VDCNN(object):
         fc1_hidden_size = 1024
         fc2_hidden_size = 512
         num_output = num_classes
-        print num_classes
 
 
         self.is_training = tf.convert_to_tensor(is_training,

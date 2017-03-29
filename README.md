@@ -15,6 +15,7 @@ for Text Classification
 2. prototxt config
 3. pragmatically add blocks
 
+4. optimize readin data queue
 4. add shortcut
 5. add kMaxPooling
 6. fold for dynamic graph
