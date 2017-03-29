@@ -12,7 +12,6 @@ for Text Classification
 1. a benchmark datasets shows it's working
 1. predictor
 2. prototxt config
-3. pragmatically add blocks
 
 4. optimize readin data queue
 4. add shortcut
