@@ -47,7 +47,7 @@ class VDCNN(object):
             is_training,
             l2_reg_lambda=0.0):
 
-        s = FEATURE_LEN#1014 vs 1024 ?
+        s = FEATURE_LEN
         f0 = 1
         embedding_size = 16
         temp_kernel = (3, embedding_size)
@@ -62,7 +62,6 @@ class VDCNN(object):
         fc1_hidden_size = 1024
         fc2_hidden_size = 512
         num_output = num_classes
-        print num_classes
 
 
         self.is_training = tf.convert_to_tensor(is_training,
