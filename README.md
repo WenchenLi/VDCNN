@@ -9,7 +9,7 @@ for Text Classification
 ```
 
 ## TODO
-1. a benchmark datasets shows it's working
+1. a benchmark datasets shows it's working[sogou, need testing and parameter tuning ]
 2. preprocess chinese as shows in sogou readme[pypinyin combined with jieba Chinese segmentation system]
 1. predictor
 2. prototxt config

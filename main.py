@@ -15,16 +15,18 @@
 """
 run the training/dev/testing
 """
-import tensorflow as tf
 import numpy as np
 import os
 import time
 import datetime
+import sys
+
 import util
 from model import VDCNN
-from tensorflow.contrib import learn
 import config
-import sys
+
+import tensorflow as tf
+from tensorflow.contrib import learn
 
 # Parameters
 # ==================================================
@@ -36,8 +38,8 @@ tf.flags.DEFINE_string("data_file", "./data/rt-polaritydata/rt_data_all.txt", "D
 #rt-polaritydata/rt_data_all.txt
 #sogou_news_csv/sogou_data_train_dev.txt
 # Model Hyperparameters
+tf.flags.DEFINE_integer("feature_len", config.FEATURE_LEN, "maximum length of the sentence at char level")
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
@@ -58,13 +60,11 @@ tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir
 
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
-
 # log current train parameters
 print("\nParameters:")
 for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
-
 
 # Data Preparation
 # ==================================================
@@ -114,7 +114,7 @@ with tf.Graph().as_default():
 
     with sess.as_default():
         vdcnn = VDCNN(
-            sequence_length=x_train.shape[1],
+            feature_len=FLAGS.feature_len,
             num_classes=y_train.shape[1],
             vocab_size=len(vocab_processor.vocabulary_),
             embedding_size=FLAGS.embedding_dim,
@@ -230,5 +230,6 @@ with tf.Graph().as_default():
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))
 
-        # finally do test on test set
-        do_test(x_test,y_test)
+# Testing
+# ==================================================
+do_test(x_test,y_test)

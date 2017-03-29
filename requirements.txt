@@ -1,2 +1,4 @@
 jieba
 pypinyin
+tensorflow-gpu==1.0.1
+numpy==1.12.1

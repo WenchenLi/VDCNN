@@ -15,15 +15,8 @@
 """
 utilities used in paper VDCNN
 """
-import wget
-import os
-import pandas as pd
-import functools
-import threading
-import Queue
 from config import FEATURE_LEN
 import tensorflow as tf
-
 import numpy as np
 import re
 
