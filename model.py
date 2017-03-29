@@ -23,9 +23,7 @@ New NLP architecture:
 2. Use deep-stack of local operations to learn high-level hierarchical representation
 """
 import tensorflow as tf
-import numpy as np
 import config
-# import ops
 from config import FEATURE_LEN
 from tensorflow.python.training import moving_averages
 from tensorflow.python.ops import control_flow_ops
@@ -66,7 +64,6 @@ class VDCNN(object):
         fc1_hidden_size = 1024
         fc2_hidden_size = 512
         num_output = num_classes
-
 
         self.is_training = tf.convert_to_tensor(is_training,
                                             dtype='bool',
