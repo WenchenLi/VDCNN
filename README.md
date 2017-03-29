@@ -10,7 +10,6 @@ for Text Classification
 
 ## TODO
 1. a benchmark datasets shows it's working
-2. use their vocabulary
 1. predictor
 2. prototxt config
 3. pragmatically add blocks
