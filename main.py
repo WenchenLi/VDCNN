@@ -119,7 +119,8 @@ with tf.Graph().as_default():
             vocab_size=len(vocab_processor.vocabulary_),
             embedding_size=FLAGS.embedding_dim,
             l2_reg_lambda=FLAGS.l2_reg_lambda,
-            is_training=is_training)
+            is_training=is_training,
+            depth=9)
 
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
