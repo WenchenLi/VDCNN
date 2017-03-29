@@ -51,6 +51,19 @@ def clean_str(string):
     return string.strip().lower()
 
 
+def transform_sogou_data(data_file):
+    """
+    transform sogou data into fastText training format
+    """
+    examples = list(open(data_file, "r").readlines())
+    with open("data/sogou_news_csv/sogou_data_train_dev.txt", 'w') as f:
+        for e in examples:
+            split_index = 3
+            sentence = e[split_index+1:].strip()
+            label = LABEL_start+e[:split_index]
+            f.write(sentence + " " + label +"\n")
+
+
 def load_data_and_labels_fasttext(data_file):
     """    
     
@@ -175,4 +188,5 @@ if __name__=="__main__":
     # p= '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.pos'
     # n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
     # load_data_and_labels_change(p,n)
-    load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
+    # load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
+    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv")

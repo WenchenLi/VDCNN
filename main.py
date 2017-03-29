@@ -31,8 +31,8 @@ import sys
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .2, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_float("test_sample_percentage", .2, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("data_file", "./data/rt-polaritydata/rt_data_all.txt", "Data source")
+tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
+tf.flags.DEFINE_string("data_file", "./data/sogou_news_csv/sogou_data_train_dev.txt", "Data source")
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
