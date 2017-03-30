@@ -44,12 +44,12 @@ def clean_str(string):
     return string.strip().lower()
 
 
-def transform_sogou_data(data_file):
+def transform_sogou_data(data_file,output_filename):
     """
     transform sogou data into fastText training format
     """
     examples = list(open(data_file, "r").readlines())
-    with open("data/sogou_news_csv/sogou_data_train_dev.txt", 'w') as f:
+    with open("data/sogou_news_csv/"+output_filename, 'w') as f:
         for e in examples:
             split_index = 3
             sentence = e[split_index+1:].strip()
@@ -182,4 +182,5 @@ if __name__=="__main__":
     # n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
     # load_data_and_labels_change(p,n)
     # load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
-    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv")
+    # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv","sogou_data_train_dev.txt")
+    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")

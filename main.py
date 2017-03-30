@@ -48,17 +48,17 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default
 tf.flags.DEFINE_float("lr", 1e-4, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 1, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
-tf.flags.DEFINE_boolean("resume", False, "whether resume training from the previous checkpoints")
-tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir/1490631628/checkpoints",
+tf.flags.DEFINE_boolean("resume", True, "whether resume training from the previous checkpoints")
+tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir/1490807032/checkpoints",
                        "checkpoint dir for model to resume training")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
-tf.flags.DEFINE_string("mode", 'train', "train or test")
+# tf.flags.DEFINE_string("mode", 'test', "train or test")
 
 
 FLAGS = tf.flags.FLAGS
@@ -76,43 +76,38 @@ print("")
 # Load data
 print("Loading data...")
 
-if FLAGS.mode == 'train':
+# if FLAGS.mode == 'train':
 
-    x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.train_data_file)
-    #TODO index2label used for predict
+x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.train_data_file)
+#TODO index2label used for predict
 
-    # Build vocabulary and transform the corpus
+# Build vocabulary and transform the corpus
 
-    vocabulary = learn.preprocessing.CategoricalVocabulary()
-    for token in config.ALPHABET:
-        vocabulary.add(token)
-    vocabulary.freeze()
+vocabulary = learn.preprocessing.CategoricalVocabulary()
+for token in config.ALPHABET:
+    vocabulary.add(token)
+vocabulary.freeze()
 
-    max_document_length = config.FEATURE_LEN
-    vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)
-    x = np.array(list(vocab_processor.fit_transform(x_text)))
+max_document_length = config.FEATURE_LEN
+vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)
+x = np.array(list(vocab_processor.fit_transform(x_text)))
 
-    # Randomly shuffle data
-    np.random.seed(10)
-    shuffle_indices = np.random.permutation(np.arange(len(y)))
-    x_shuffled = x[shuffle_indices]
-    y_shuffled = y[shuffle_indices]
+# Randomly shuffle data
+np.random.seed(10)
+shuffle_indices = np.random.permutation(np.arange(len(y)))
+x_shuffled = x[shuffle_indices]
+y_shuffled = y[shuffle_indices]
 
-    # Split train/dev set
-    dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-    x_train, x_dev = \
-        x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-    y_train, y_dev = \
-        y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
-    print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
-    print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
+# Split train/dev set
+dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
+x_train, x_dev = \
+    x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+y_train, y_dev = \
+    y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
+print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
-else:
-    x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.test_data_file)
-
-
-
-# Training if mode train
+# Training
 # ==================================================
 
 with tf.Graph().as_default():
@@ -202,8 +197,6 @@ with tf.Graph().as_default():
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            # if writer:
-            #     writer.add_summary(summaries, step)
 
         def do_test(x_batch, y_batch, writer=None):
             """
@@ -220,8 +213,6 @@ with tf.Graph().as_default():
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            # if writer:
-            #     writer.add_summary(summaries, step)
 
         # Generate batches
         batches = util.batch_iter(
@@ -232,14 +223,11 @@ with tf.Graph().as_default():
             x_batch, y_batch = zip(*batch)
             train_step(x_batch, y_batch)
             current_step = tf.train.global_step(sess, global_step)
-            # if current_step % FLAGS.evaluate_every == 0:
-            #     print("\nEvaluation:")
-            #     dev_step(x_dev, y_dev)
-            #     print("----------------------------------------")
+            if current_step % FLAGS.evaluate_every == 0:
+                print("\nEvaluation:")
+                dev_step(x_dev, y_dev)
+                print("----------------------------------------")
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))
 
-# Testing
-# ==================================================
-do_test(x_text, y)
