@@ -33,8 +33,8 @@ from tensorflow.contrib import learn
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .01, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("train_data_file", "./data/sogou_news_csv/sogou_data_train_dev.txt", "train Data source")
+# tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
+tf.flags.DEFINE_string("train_data_file", "./data/rt-polaritydata/rt_data_all.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
 
 #rt-polaritydata/rt_data_all.txt
@@ -52,7 +52,7 @@ tf.flags.DEFINE_integer("evaluate_every", 1, "Evaluate model on dev set after th
 tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
-tf.flags.DEFINE_boolean("resume", True, "whether resume training from the previous checkpoints")
+tf.flags.DEFINE_boolean("resume", False, "whether resume training from the previous checkpoints")
 tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir/1490807032/checkpoints",
                        "checkpoint dir for model to resume training")
 # Misc Parameters
