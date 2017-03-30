@@ -32,7 +32,7 @@ from tensorflow.contrib import learn
 # ==================================================
 
 # Data loading params
-tf.flags.DEFINE_float("dev_sample_percentage", .01, "Percentage of the training data to use for validation")
+tf.flags.DEFINE_float("dev_sample_percentage", .4, "Percentage of the training data to use for validation")
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
 tf.flags.DEFINE_string("train_data_file", "./data/rt-polaritydata/rt_data_all.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
@@ -48,7 +48,7 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default
 tf.flags.DEFINE_float("lr", 1e-4, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 1, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
@@ -182,21 +182,33 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
 
-        def dev_step(x_batch, y_batch, writer=None):
+        def dev_step(x_batch, y_batch):
             """
             Evaluates model on a dev set
             """
-            feed_dict = {
-              vdcnn.input_x: x_batch,
-              vdcnn.input_y: y_batch,
-              is_training: False
-            }
+            losses = []
+            accuracies = []
+            start_index = 0
+            end_index = start_index + FLAGS.batch_size
+            for i in xrange(len(y_batch)/FLAGS.batch_size + 1):
 
-            step, loss, accuracy = sess.run(
-                [global_step, vdcnn.loss, vdcnn.accuracy],
-                feed_dict)
+                feed_dict = {
+                  vdcnn.input_x: x_batch[start_index:end_index],
+                  vdcnn.input_y: y_batch[start_index:end_index],
+                  is_training: False
+                }
+
+                loss, accuracy = sess.run(
+                    [vdcnn.loss, vdcnn.accuracy],
+                    feed_dict)
+
+                start_index = end_index
+                end_index += FLAGS.batch_size
+                losses.append(loss)
+                accuracies.append(accuracy)
+
             time_str = datetime.datetime.now().isoformat()
-            print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+            print("{}: loss {:g}, acc {:g}".format(time_str,  np.mean(losses), np.mean(accuracies)))
 
         def do_test(x_batch, y_batch, writer=None):
             """
