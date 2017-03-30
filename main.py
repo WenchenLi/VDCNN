@@ -32,9 +32,11 @@ from tensorflow.contrib import learn
 # ==================================================
 
 # Data loading params
-tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_float("test_sample_percentage", .1, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("data_file", "./data/rt-polaritydata/rt_data_all.txt", "Data source")
+tf.flags.DEFINE_float("dev_sample_percentage", .01, "Percentage of the training data to use for validation")
+tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
+tf.flags.DEFINE_string("train_data_file", "./data/sogou_news_csv/sogou_data_train_dev.txt", "train Data source")
+tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
+
 #rt-polaritydata/rt_data_all.txt
 #sogou_news_csv/sogou_data_train_dev.txt
 # Model Hyperparameters
@@ -50,13 +52,14 @@ tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after 
 tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
-
-# Misc Parameters
-tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
-tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 tf.flags.DEFINE_boolean("resume", False, "whether resume training from the previous checkpoints")
 tf.flags.DEFINE_string("CHECKPOINT_DIR", "/home/wenchen/projects/VDCNN/train_dir/1490631628/checkpoints",
                        "checkpoint dir for model to resume training")
+# Misc Parameters
+tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
+tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
+tf.flags.DEFINE_string("mode", 'train', "train or test")
+
 
 FLAGS = tf.flags.FLAGS
 FLAGS._parse_flags()
@@ -66,43 +69,50 @@ for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
-# Data Preparation
+
+# Data Preparation train/test
 # ==================================================
 
 # Load data
 print("Loading data...")
-x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.data_file)
-#TODO index2label used for predict
 
-# Build vocabulary and transform the corpus
+if FLAGS.mode == 'train':
 
-vocabulary = learn.preprocessing.CategoricalVocabulary()
-for token in config.ALPHABET:
-    vocabulary.add(token)
-vocabulary.freeze()
+    x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.train_data_file)
+    #TODO index2label used for predict
 
-max_document_length = config.FEATURE_LEN
-vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)#TODO  vocabularyBuilder contains full char defined in config ALPHABET
-x = np.array(list(vocab_processor.fit_transform(x_text)))
+    # Build vocabulary and transform the corpus
 
-# Randomly shuffle data
-np.random.seed(10)
-shuffle_indices = np.random.permutation(np.arange(len(y)))
-x_shuffled = x[shuffle_indices]
-y_shuffled = y[shuffle_indices]
+    vocabulary = learn.preprocessing.CategoricalVocabulary()
+    for token in config.ALPHABET:
+        vocabulary.add(token)
+    vocabulary.freeze()
 
-# Split train/dev/test set
-test_sample_index = -1 * int(FLAGS.test_sample_percentage * float(len(y)))
-dev_sample_index = test_sample_index + -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-x_train, x_dev,x_test = \
-    x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:test_sample_index], x_shuffled[test_sample_index:]
-y_train, y_dev, y_test = \
-    y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:test_sample_index], y_shuffled[test_sample_index:]
-print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
-print("Train/Dev/test split: {:d}/{:d}".format(len(y_train), len(y_dev),len(y_test)))
+    max_document_length = config.FEATURE_LEN
+    vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)
+    x = np.array(list(vocab_processor.fit_transform(x_text)))
+
+    # Randomly shuffle data
+    np.random.seed(10)
+    shuffle_indices = np.random.permutation(np.arange(len(y)))
+    x_shuffled = x[shuffle_indices]
+    y_shuffled = y[shuffle_indices]
+
+    # Split train/dev set
+    dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
+    x_train, x_dev = \
+        x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+    y_train, y_dev = \
+        y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+    print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
+    print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
+
+else:
+    x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.test_data_file)
 
 
-# Training
+
+# Training if mode train
 # ==================================================
 
 with tf.Graph().as_default():
@@ -222,14 +232,14 @@ with tf.Graph().as_default():
             x_batch, y_batch = zip(*batch)
             train_step(x_batch, y_batch)
             current_step = tf.train.global_step(sess, global_step)
-            if current_step % FLAGS.evaluate_every == 0:
-                print("\nEvaluation:")
-                dev_step(x_dev, y_dev)
-                print("----------------------------------------")
+            # if current_step % FLAGS.evaluate_every == 0:
+            #     print("\nEvaluation:")
+            #     dev_step(x_dev, y_dev)
+            #     print("----------------------------------------")
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))
 
 # Testing
 # ==================================================
-do_test(x_test,y_test)
+do_test(x_text, y)

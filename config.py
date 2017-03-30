@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-FEATURE_LEN = 128
+FEATURE_LEN = 512
 CHAR_EBD_SIZE = 16
 # BATCH_SIZE = 64
 EPOCHS = 10
