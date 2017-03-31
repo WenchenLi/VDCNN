@@ -12,28 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
-FEATURE_LEN = 128
+FEATURE_LEN = 128 # char length of the sentence, you can configure this to fit your problem
 CHAR_EBD_SIZE = 16
-# BATCH_SIZE = 64
-EPOCHS = 10
-SD = 0.05  # std for gaussian distribution
-NOUTPUT = 2
-# DATA_SHAPE = (BATCH_SIZE, 1, FEATURE_LEN, 1)
 ALPHABET = list("abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+ =<>()[]{}")
-CHINESE_ALPHABET = []#TODO add chiense common words here as atomic input elements
 
-
-
-TRAIN_BATCH_SIZE = 16
-LEARNING_RATE = 0.001
-REPORT_STEP = 1000 # prediction on the validation dataset, and then save the model
-TRAIN_DIR = './save_model/' #where to save and load the model
-DATA_DIR ="./data/train_50000" #where the data is
-RESUME = True
-TRAINING_STEPS = 100000
 PER_PROCESS_GPU_MEMORY_FRACTION = .95
-
 MOVING_AVERAGE_DECAY = 0.99
 BN_DECAY = .99
 BN_EPSILON = 1e-6
@@ -42,5 +25,4 @@ CONV_WEIGHT_STDDEV = 0.01
 FC_WEIGHT_DECAY = 0.00001
 FC_WEIGHT_STDDEV = 0.0002
 _EPSILON = 10e-8
-# VALIDATE_BATCH_SIZE = 128
-# TEST_BATCH_SIZE = 128
+

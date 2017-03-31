@@ -4,23 +4,21 @@ tensorflow implementation of Very Deep Convolutional Networks
 for Text Classification
 
 # RUN
-```bash
 
+## train
+I have toy dataset rt_data_all.txt to get you started with the model.
+ 
+```bash
+# config the Training flags in main
+python main.py
 ```
 
-## TODO
-1. predictor
-2. on our own data
-
-2. prototxt config
-4. optimize readin data queue
-4. add shortcut
-5. add kMaxPooling
-6. fold for dynamic graph
-
-
-### pretrain
-- train char level nlp for english and chinese 
+## predict
+please take a look at predict.py. I have example for both english and chinese
+```bash
+# config the Training flags in main
+python predict.py
+```
 
 ### model and implementation details
 - Convolutional block
@@ -61,6 +59,15 @@ following is a few examples, where 'pos' and 'neg'  are labels.
 the thing looks like a made-for-home-video quickie . __label__neg
 effective but too-tepid biopic __label__pos
 ```
-# reference
 
+## TODO
+2. on our own data
+
+2. prototxt config
+4. optimize readin data queue
+4. add shortcut
+5. add kMaxPooling
+6. fold for dynamic graph
+
+# reference
 [1][Conneau, Alexis et al. “Very Deep Convolutional Networks for Natural Language Processing.” CoRR abs/1606.01781 (2016): n. pag.](https://pdfs.semanticscholar.org/f797/fd44b9ddd5845611eb7a705ca9464a8819d1.pdf?_ga=1.122241998.496193353.1486868690)

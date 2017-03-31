@@ -209,6 +209,6 @@ if __name__ == "__main__":
     # load_data_and_labels_change(p,n)
     # load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
     # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv","sogou_data_train_dev.txt")
-    # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")
+    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")
     # print word2pinyin("中心")
     print sentence2pinyin("我来到北京清华大学")

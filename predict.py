@@ -132,11 +132,21 @@ class VDCNN_model(object):
 
 
 if __name__ == '__main__':
-    # load model parameters
+
+    # predict is language is english
     vdcnn = VDCNN_model(
                         model_weights_dir='/home/wenchen/projects/VDCNN/train_dir/1490994156/checkpoints',
                         num_channel=1, device="gpu", device_id=0, variable_reuse=None,is_chinese=False)
     sentences = ["a romantic comedy enriched by a sharp eye for manners and mores .",
                  "as pedestrian as they come ."] # example in rt_data_all
+    res = vdcnn.predict(sentences)
+    print res
+
+    # predict if language is chinese
+    vdcnn = VDCNN_model(
+        model_weights_dir='/home/wenchen/projects/VDCNN/train_dir/1490994995/checkpoints',
+        num_channel=1, device="gpu", device_id=0, variable_reuse=None, is_chinese=True)
+    sentences = ["我来到北京清华大学",
+                 "我来到北京"]  # example in rt_data_all
     res = vdcnn.predict(sentences)
     print res
