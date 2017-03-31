@@ -77,13 +77,33 @@ class VDCNN(object):
         self.num_output = num_classes
         self.l2_reg_lambda = l2_reg_lambda
         self._extra_train_ops = []  # used to store all the extra train operations other than gradient descent
+        self.depth = depth
+        self.vocab_size = vocab_size
+        self.is_training = is_training
+        self.num_classes = num_classes
 
+        self.build_model()
+        self.build_loss_accu()
+
+
+    def build_loss_accu(self):
+        with tf.name_scope("loss"):
+            losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.input_y)
+            self.loss = tf.reduce_mean(losses) + self.l2_reg_lambda * self.l2_loss
+
+        # accuracy
+        predictions = tf.argmax(self.logits, 1, name="prediction")
+        with tf.name_scope("accuracy"):
+            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y, 1))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+
+    def build_model(self):
         # Placeholders for inputs
-        self.is_training = tf.convert_to_tensor(is_training,
+        self.is_training = tf.convert_to_tensor(self.is_training,
                                                 dtype='bool',
                                                 name='is_training')
         self.input_x = tf.placeholder(tf.int32, [None, self.s], name="input_x")
-        self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
+        self.input_y = tf.placeholder(tf.float32, [None, self.num_classes], name="input_y")
 
         # Keeping track of l2 regularization loss (optional)
         self.l2_loss = tf.constant(0.0)
@@ -91,7 +111,7 @@ class VDCNN(object):
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
             W = tf.Variable(
-                tf.random_uniform([vocab_size, self.embedding_size], -1.0, 1.0),
+                tf.random_uniform([self.vocab_size, self.embedding_size], -1.0, 1.0),
                 name="W")
             embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
             embedded_chars_expanded = tf.expand_dims(embedded_chars, -1)
@@ -106,25 +126,25 @@ class VDCNN(object):
         # CONVOLUTION_BLOCK 64 FILTERS
         block_id = 0
         with tf.variable_scope('block' + str(block_id)):
-            for conv_id in xrange(self.conv_depth[depth][block_id]):
+            for conv_id in xrange(self.conv_depth[self.depth][block_id]):
                 out = self._unit_conv_block(out, block_id, conv_id)
 
         # CONVOLUTION_BLOCK 128 FILTERS
         block_id = 1
         with tf.variable_scope('block' + str(block_id)):
-            for conv_id in xrange(self.conv_depth[depth][block_id]):
+            for conv_id in xrange(self.conv_depth[self.depth][block_id]):
                 out = self._unit_conv_block(out, block_id, conv_id)
 
         # CONVOLUTION_BLOCK  256 FILTERS
         block_id = 2
         with tf.variable_scope('block' + str(block_id)):
-            for conv_id in xrange(self.conv_depth[depth][block_id]):
+            for conv_id in xrange(self.conv_depth[self.depth][block_id]):
                 out = self._unit_conv_block(out, block_id, conv_id)
 
         # CONVOLUTION_BLOCK 512 FILTERS
         block_id = 3
         with tf.variable_scope('block' + str(block_id)):
-            for conv_id in xrange(self.conv_depth[depth][block_id]):
+            for conv_id in xrange(self.conv_depth[self.depth][block_id]):
                 out = self._unit_conv_block(out, block_id, conv_id)
 
         # K-max pooling (k=8) vs max pooling , according to paper,
@@ -151,15 +171,8 @@ class VDCNN(object):
 
         # calculate mean cross-entropy loss
         logits = self._fc(act_fc2, self.num_output, 'softmax')
-        with tf.name_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.input_y)
-            self.loss = tf.reduce_mean(losses) + self.l2_reg_lambda * self.l2_loss
-
-        # accuracy
-        predictions = tf.argmax(logits, 1, name="prediction")
-        with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y, 1))
-            self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+        self.logits = logits
+        return logits
 
     def _unit_conv_block(self, input_layer, block_id, conv_id):
         """

@@ -27,18 +27,18 @@ import config
 
 import tensorflow as tf
 from tensorflow.contrib import learn
-
+import pickle
 # Parameters
 # ==================================================
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("train_data_file", "./data/sogou_news_csv/sogou_data_train_dev.txt", "train Data source")
+tf.flags.DEFINE_string("train_data_file", "./data/rt-polaritydata/rt_data_all.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
 
-#rt-polaritydata/rt_data_all.txt
-#sogou_news_csv/sogou_data_train_dev.txt
+# rt-polaritydata/rt_data_all.txt
+# sogou_news_csv/sogou_data_train_dev.txt
 # Model Hyperparameters
 tf.flags.DEFINE_integer("feature_len", config.FEATURE_LEN, "maximum length of the sentence at char level")
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
@@ -69,7 +69,6 @@ for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
-
 # Data Preparation train/test
 # ==================================================
 
@@ -77,9 +76,8 @@ print("")
 print("Loading data...")
 
 # if FLAGS.mode == 'train':
-
 x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.train_data_file)
-#TODO index2label used for predict
+# TODO index2label used for predict
 
 # Build vocabulary and transform the corpus
 
@@ -89,7 +87,7 @@ for token in config.ALPHABET:
 vocabulary.freeze()
 
 max_document_length = config.FEATURE_LEN
-vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length,vocabulary=vocabulary, tokenizer_fn=list)
+vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, vocabulary=vocabulary, tokenizer_fn=list)
 x = np.array(list(vocab_processor.fit_transform(x_text)))
 
 # Randomly shuffle data
@@ -112,8 +110,8 @@ print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
 with tf.Graph().as_default():
     session_conf = tf.ConfigProto(
-      allow_soft_placement=FLAGS.allow_soft_placement,
-      log_device_placement=FLAGS.log_device_placement)
+        allow_soft_placement=FLAGS.allow_soft_placement,
+        log_device_placement=FLAGS.log_device_placement)
     sess = tf.Session(config=session_conf)
     is_training = tf.placeholder('bool', [], name='is_training')
 
@@ -129,7 +127,7 @@ with tf.Graph().as_default():
 
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        train_ops = vdcnn.build_train_op(FLAGS.lr,global_step)
+        train_ops = vdcnn.build_train_op(FLAGS.lr, global_step)
 
         # Output directory for models and summaries
         timestamp = str(int(time.time()))
@@ -151,8 +149,9 @@ with tf.Graph().as_default():
             os.makedirs(checkpoint_dir)
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
 
-        # Write vocabulary
+        # Write vocabulary and index2label
         vocab_processor.save(os.path.join(out_dir, "vocab"))
+        pickle.dump(index2label, open(os.path.join(out_dir,'index2label.pk'), 'wb'))
 
         # resume or Initialize all variables to train from scratch
         if FLAGS.resume:
@@ -171,9 +170,9 @@ with tf.Graph().as_default():
             A single training step
             """
             feed_dict = {
-              vdcnn.input_x: x_batch,
-              vdcnn.input_y: y_batch,
-              is_training: True
+                vdcnn.input_x: x_batch,
+                vdcnn.input_y: y_batch,
+                is_training: True
             }
 
             _, step, loss, accuracy = sess.run(
@@ -181,6 +180,7 @@ with tf.Graph().as_default():
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+
 
         def dev_step(x_batch, y_batch):
             """
@@ -190,12 +190,11 @@ with tf.Graph().as_default():
             accuracies = []
             start_index = 0
             end_index = start_index + FLAGS.batch_size
-            for i in xrange(len(y_batch)/FLAGS.batch_size + 1):
-
+            for i in xrange(len(y_batch) / FLAGS.batch_size + 1):
                 feed_dict = {
-                  vdcnn.input_x: x_batch[start_index:end_index],
-                  vdcnn.input_y: y_batch[start_index:end_index],
-                  is_training: False
+                    vdcnn.input_x: x_batch[start_index:end_index],
+                    vdcnn.input_y: y_batch[start_index:end_index],
+                    is_training: False
                 }
 
                 loss, accuracy = sess.run(
@@ -208,7 +207,8 @@ with tf.Graph().as_default():
                 accuracies.append(accuracy)
 
             time_str = datetime.datetime.now().isoformat()
-            print("{}: loss {:g}, acc {:g}".format(time_str,  np.mean(losses), np.mean(accuracies)))
+            print("{}: loss {:g}, acc {:g}".format(time_str, np.mean(losses), np.mean(accuracies)))
+
 
         def do_test(x_batch, y_batch, writer=None):
             """
@@ -226,6 +226,7 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
 
+
         # Generate batches
         batches = util.batch_iter(
             list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
@@ -242,4 +243,3 @@ with tf.Graph().as_default():
             if current_step % FLAGS.checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))
-

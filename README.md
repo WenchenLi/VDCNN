@@ -9,11 +9,10 @@ for Text Classification
 ```
 
 ## TODO
+1. predictor
 2. on our own data
 
-1. predictor
 2. prototxt config
-
 4. optimize readin data queue
 4. add shortcut
 5. add kMaxPooling

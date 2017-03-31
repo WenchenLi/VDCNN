@@ -110,7 +110,7 @@ def load_data_and_labels_fasttext(data_file):
 
             if current_label not in check_label_exists:
                 check_label_exists[current_label] = 1
-                index2label.append(current_label)
+                index2label.append(current_label.replace("\n",""))
                 label2index[current_label] = current_label_index
                 current_label_index += 1
             else:
