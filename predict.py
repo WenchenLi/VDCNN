@@ -35,14 +35,17 @@ class VDCNN_model(object):
         model wrapper similar to keras.model
     """
 
-    def __init__(self, num_class, model_weights_dir, num_channel=1, device="gpu", device_id=0, variable_reuse=None,
+    def __init__(self,  model_weights_dir, num_channel=1, device="gpu", device_id=0, variable_reuse=None,
                  is_chinese=False):
         """
 
+        
         :param model_weights_dir: string, save_model dir
+        :param num_channel: int | number of channels of input
         :param device: string, cpu or gpu
-        :param device_id: int,
+        :param device_id: int|cpu or gpu device id 
         :param variable_reuse: bool, whether to reuse variable during prediction,(for multiple gpus, see below examples)
+        :param is_chinese: bool|whether the model input is chinese
         """
         self.model_weights_dir = model_weights_dir
         self.per_process_gpu_memory_fraction = .95
@@ -50,7 +53,7 @@ class VDCNN_model(object):
         self.device = device
         self.device_id = device_id
         self.variable_reuse = variable_reuse
-        self.num_class = num_class
+
         self.is_chinese = is_chinese
         # load vocab
 
@@ -60,6 +63,7 @@ class VDCNN_model(object):
         self.vocabulary.freeze()
         self.index2label = pickle.load(open(os.path.join(
             self.model_weights_dir[:-11], 'index2label.pk'), 'rb'))
+        self.num_class = len(self.index2label)
 
         max_document_length = config.FEATURE_LEN
         self.vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, vocabulary=self.vocabulary,
@@ -69,7 +73,7 @@ class VDCNN_model(object):
         with tf.device(self.device + ":" + str(self.device_id)):
             self.model = VDCNN(
                 feature_len=config.FEATURE_LEN,
-                num_classes=num_class,
+                num_classes=self.num_class,
                 vocab_size=70,  # fixed to 70, <unk> + 69 char in config
                 embedding_size=config.CHAR_EBD_SIZE,
                 is_training=self.is_training,
@@ -129,10 +133,10 @@ class VDCNN_model(object):
 
 if __name__ == '__main__':
     # load model parameters
-    vdcnn = VDCNN_model(num_class=2,
+    vdcnn = VDCNN_model(
                         model_weights_dir='/home/wenchen/projects/VDCNN/train_dir/1490994156/checkpoints',
                         num_channel=1, device="gpu", device_id=0, variable_reuse=None,is_chinese=False)
-
-    sentences = ["a romantic comedy enriched by a sharp eye for manners and mores .","as pedestrian as they come ."]
+    sentences = ["a romantic comedy enriched by a sharp eye for manners and mores .",
+                 "as pedestrian as they come ."] # example in rt_data_all
     res = vdcnn.predict(sentences)
     print res
