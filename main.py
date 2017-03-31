@@ -36,9 +36,10 @@ tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training d
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
 tf.flags.DEFINE_string("train_data_file", "./data/rt-polaritydata/rt_data_all.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
+# data/rt-polaritydata/rt_data_all.txt
+# data/sogou_news_csv/toy_sogou_news.txt
 
-# rt-polaritydata/rt_data_all.txt
-# sogou_news_csv/sogou_data_train_dev.txt
+
 # Model Hyperparameters
 tf.flags.DEFINE_integer("feature_len", config.FEATURE_LEN, "maximum length of the sentence at char level")
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
