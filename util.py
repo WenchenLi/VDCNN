@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 The Wenchen Li. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +21,32 @@ import tensorflow as tf
 import numpy as np
 import re
 
+import jieba
+import pypinyin
+
 LABEL_start = '__label__'
+
+
+def word_seg(sentence, segmenter=" "):
+    seg_list = jieba.cut(sentence, cut_all=False)
+    # print("Default Mode: " + segmenter.join(seg_list))  # 精确模式
+    return list(seg_list)
+
+
+def word2pinyin(word):
+    list_res = pypinyin.pinyin(word, style=pypinyin.TONE2, heteronym=False)
+    if len(list_res) > 1:
+        return "( " + " ".join([p[0] for p in list_res]) + " )"
+    else:
+        return list_res[0][0]
+
+
+def sentence2pinyin(sentence):
+    seg = word_seg(sentence)
+    res = []
+    for s in seg:
+        res.append(word2pinyin(s))
+    return " ".join(res)
 
 
 def clean_str(string):
@@ -44,17 +70,17 @@ def clean_str(string):
     return string.strip().lower()
 
 
-def transform_sogou_data(data_file,output_filename):
+def transform_sogou_data(data_file, output_filename):
     """
     transform sogou data into fastText training format
     """
     examples = list(open(data_file, "r").readlines())
-    with open("data/sogou_news_csv/"+output_filename, 'w') as f:
+    with open("data/sogou_news_csv/" + output_filename, 'w') as f:
         for e in examples:
             split_index = 3
-            sentence = e[split_index+1:].strip()
-            label = LABEL_start+e[:split_index]
-            f.write(sentence + " " + label +"\n")
+            sentence = e[split_index + 1:].strip()
+            label = LABEL_start + e[:split_index]
+            f.write(sentence + " " + label + "\n")
 
 
 def load_data_and_labels_fasttext(data_file):
@@ -90,7 +116,7 @@ def load_data_and_labels_fasttext(data_file):
             else:
                 continue
 
-        return examples_sentences, labels, index2label,label2index
+        return examples_sentences, labels, index2label, label2index
 
     def onehot_encode(label):
         """
@@ -111,9 +137,9 @@ def load_data_and_labels_fasttext(data_file):
     x_text = [clean_str(sent) for sent in x_text]
     x_text = [list(sentence.lower())[:FEATURE_LEN] for sentence in x_text]
     # Generate labels
-    labels = [onehot_encode(l) for l in labels] #use one hot for each label
+    labels = [onehot_encode(l) for l in labels]  # use one hot for each label
     y = np.array(labels)
-    return [x_text, y,index2label]
+    return [x_text, y, index2label]
 
 
 def load_data_and_labels_change(positive_data_file, negative_data_file):
@@ -123,17 +149,16 @@ def load_data_and_labels_change(positive_data_file, negative_data_file):
     """
     with open("rt_data_all.txt", 'w') as f:
 
-
         # Load data from files
         positive_examples = list(open(positive_data_file, "r").readlines())
         positive_examples = [s.strip() for s in positive_examples]
         for e in positive_examples:
-            f.write(e + " "+ LABEL_start+"pos"+'\n')
+            f.write(e + " " + LABEL_start + "pos" + '\n')
 
         negative_examples = list(open(negative_data_file, "r").readlines())
         negative_examples = [s.strip() for s in negative_examples]
         for e in negative_examples:
-            f.write(e + " "+ LABEL_start+"neg"+'\n')
+            f.write(e + " " + LABEL_start + "neg" + '\n')
 
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):
@@ -142,7 +167,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
     data = np.array(data)
     data_size = len(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:
@@ -172,15 +197,18 @@ def latest_checkpoint(checkpoint_dir, latest_filename=None):
     ckpt = tf.train.get_checkpoint_state(checkpoint_dir, latest_filename)
     if ckpt and ckpt.model_checkpoint_path:
         return ckpt.model_checkpoint_path
-    else:# todo error message
+    else:  # todo error message
         pass
 
-    # return None
+        # return None
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     # p= '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.pos'
     # n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
     # load_data_and_labels_change(p,n)
     # load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
     # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv","sogou_data_train_dev.txt")
-    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")
+    # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")
+    # print word2pinyin("中心")
+    print sentence2pinyin("我来到北京清华大学")
