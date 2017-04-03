@@ -93,7 +93,7 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
     reload(sys)
     sys.setdefaultencoding('utf8')
     stats = defaultdict(int)
-
+    sentence_len = []
     with open("data/lungutang/" + output_filename, 'w') as fw:
         with open(data_file,'r') as fr:
             reader = csv.reader(fr)
@@ -105,12 +105,15 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
 
                 raw_sentence = row[1]
                 sentence = clean_str(str(sentence2pinyin(raw_sentence)))
+                sentence_len.append(len(sentence))
                 # print i,raw_sentence
                 fw.write(sentence+" "+label+"\n")
 
     if print_stats:
         for k in stats:
             print k,stats[k]
+
+        print np.mean(sentence_len)
 
 
 

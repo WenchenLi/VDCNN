@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-FEATURE_LEN = 128 # char length of the sentence, you can configure this to fit your problem
+FEATURE_LEN = 512 # char length of the sentence, you can configure this to fit your problem 80% 128
 CHAR_EBD_SIZE = 16
 ALPHABET = list("abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+ =<>()[]{}")
 
