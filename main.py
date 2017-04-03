@@ -104,20 +104,6 @@ x_shuffled = x[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # Split train/dev set
-# dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-# x_train, x_dev = \
-#     x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-# y_train, y_dev = \
-#     y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
-# ------------------------------------
-# def train_dev_split(x, y,percentage=.2):
-#     data_dist = {i:0 for i in xrange(y.shape[1])}
-#     #get all
-#     for l in y:
-#         data_dist[np.argmax(l)] += 1
-#
-#     return (x_train, y_train), (x_dev, y_dev)
-
 x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled,test_size=0.2)
 
 num_classes = y_train.shape[1]
@@ -240,7 +226,7 @@ with tf.Graph().as_default():
 
             time_str = datetime.datetime.now().isoformat()
             print("{}: loss {:g}, acc {:g}".format(time_str, np.mean(losses), np.mean(accuracies)))
-            print dev_confusion_matrix
+            print dev_confusion_matrix#row given true, col prediction
 
         def do_test(x_batch, y_batch, writer=None):
             """
