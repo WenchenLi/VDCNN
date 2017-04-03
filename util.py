@@ -104,7 +104,7 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
                 label = LABEL_start + raw_label
 
                 raw_sentence = row[1]
-                sentence = clean_str(str(sentence2pinyin(raw_sentence)))
+                sentence = str(sentence2pinyin(raw_sentence))
                 sentence_len.append(len(sentence))
                 # print i,raw_sentence
                 fw.write(sentence+" "+label+"\n")
@@ -250,4 +250,4 @@ if __name__ == "__main__":
     # print word2pinyin("中心")
     # print sentence2pinyin("我来到北京清华大学")
 
-    transform_lungutang("data/lungutang/lungutang_all.csv","lungutang.txt")
+    transform_lungutang("data/lungutang/lungutang_all_update_13.csv","lungutang_13.txt")

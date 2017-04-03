@@ -35,7 +35,7 @@ import pickle
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("train_data_file", "./data/lungutang/lungutang.txt", "train Data source")
+tf.flags.DEFINE_string("train_data_file", "./data/lungutang/lungutang_13.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
 # data/rt-polaritydata/rt_data_all.txt
 # data/sogou_news_csv/toy_sogou_news.txt
@@ -51,8 +51,8 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default
 tf.flags.DEFINE_float("lr", 1e-4, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
+tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("checkpoint_every", 10000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
 tf.flags.DEFINE_boolean("resume", False, "whether resume training from the previous checkpoints")
