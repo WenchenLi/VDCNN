@@ -29,6 +29,8 @@ import config
 import tensorflow as tf
 from tensorflow.contrib import learn
 import pickle
+from sklearn.model_selection import train_test_split
+
 # Parameters
 # ==================================================
 
@@ -91,7 +93,10 @@ vocabulary.freeze()
 max_document_length = config.FEATURE_LEN
 vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length, vocabulary=vocabulary, tokenizer_fn=list)
 x = np.array(list(vocab_processor.fit_transform(x_text)))
+print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
 
+
+# ------ random load data part------
 # Randomly shuffle data
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(y)))
@@ -99,12 +104,28 @@ x_shuffled = x[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # Split train/dev set
-dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-x_train, x_dev = \
-    x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-y_train, y_dev = \
-    y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
-print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
+# dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
+# x_train, x_dev = \
+#     x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+# y_train, y_dev = \
+#     y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+# ------------------------------------
+# def train_dev_split(x, y,percentage=.2):
+#     data_dist = {i:0 for i in xrange(y.shape[1])}
+#     #get all
+#     for l in y:
+#         data_dist[np.argmax(l)] += 1
+#
+#     return (x_train, y_train), (x_dev, y_dev)
+
+x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled,test_size=0.2)
+
+num_classes = y_train.shape[1]
+y_dev_class_dist = {i: 0 for i in xrange(num_classes)}
+for d in y_dev:
+    y_dev_class_dist[np.argmax(d)] += 1
+for k in y_dev_class_dist:
+    print index2label[k], y_dev_class_dist[k]
 print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
 # Training
@@ -120,7 +141,7 @@ with tf.Graph().as_default():
     with sess.as_default():
         vdcnn = VDCNN(
             feature_len=FLAGS.feature_len,
-            num_classes=y_train.shape[1],
+            num_classes=num_classes,
             vocab_size=len(vocab_processor.vocabulary_),
             embedding_size=FLAGS.embedding_dim,
             l2_reg_lambda=FLAGS.l2_reg_lambda,
@@ -153,7 +174,7 @@ with tf.Graph().as_default():
 
         # Write vocabulary and index2label
         vocab_processor.save(os.path.join(out_dir, "vocab"))
-        pickle.dump(index2label, open(os.path.join(out_dir,'index2label.pk'), 'wb'))
+        pickle.dump(index2label, open(os.path.join(out_dir, 'index2label.pk'), 'wb'))
 
         # resume or Initialize all variables to train from scratch
         if FLAGS.resume:
@@ -192,6 +213,8 @@ with tf.Graph().as_default():
             accuracies = []
             start_index = 0
             end_index = start_index + FLAGS.batch_size
+            class_accu = {i: [0, 0] for i in xrange(num_classes)}  # [predict, ground_truth]
+
             for i in xrange(len(y_batch) / FLAGS.batch_size + 1):
                 feed_dict = {
                     vdcnn.input_x: x_batch[start_index:end_index],
@@ -199,8 +222,8 @@ with tf.Graph().as_default():
                     is_training: False
                 }
 
-                loss, accuracy = sess.run(
-                    [vdcnn.loss, vdcnn.accuracy],
+                loss, accuracy, prediction = sess.run(
+                    [vdcnn.loss, vdcnn.accuracy, vdcnn.predictions],
                     feed_dict)
 
                 start_index = end_index

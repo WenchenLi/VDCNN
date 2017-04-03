@@ -61,7 +61,7 @@ effective but too-tepid biopic __label__pos
 ```
 
 ## TODO
-2. on our own data[result][separate accuracy for each class]
+2. on our own data[result][separate accuracy for each class][confusion matrix]
 3. uniform sample from different category[weighted sample][precision/recall/f1][give different weights to the positive and negative examples in the training criterion.]
 3. add [n-gram cnn as comparision](https://github.com/dennybritz/cnn-text-classification-tf)
 

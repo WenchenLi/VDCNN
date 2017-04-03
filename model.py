@@ -93,9 +93,9 @@ class VDCNN(object):
             self.loss = tf.reduce_mean(losses) + self.l2_reg_lambda * self.l2_loss
 
         # accuracy
-        predictions = tf.argmax(self.logits, 1, name="prediction")
+        self.predictions = tf.argmax(self.logits, 1, name="prediction")
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(predictions, tf.argmax(self.input_y, 1))
+            correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
     def build_model(self):
