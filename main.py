@@ -35,10 +35,11 @@ import pickle
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("train_data_file", "./data/rt-polaritydata/rt_data_all.txt", "train Data source")
+tf.flags.DEFINE_string("train_data_file", "./data/lungutang/lungutang.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
 # data/rt-polaritydata/rt_data_all.txt
 # data/sogou_news_csv/toy_sogou_news.txt
+# data/lungutang/lungutang.txt
 
 
 # Model Hyperparameters
@@ -79,7 +80,6 @@ print("Loading data...")
 
 # if FLAGS.mode == 'train':
 x_text, y, index2label = util.load_data_and_labels_fasttext(FLAGS.train_data_file)
-# TODO index2label used for predict
 
 # Build vocabulary and transform the corpus
 

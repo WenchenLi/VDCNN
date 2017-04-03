@@ -62,6 +62,7 @@ effective but too-tepid biopic __label__pos
 
 ## TODO
 2. on our own data
+3. add n-gram cnn as comparision
 
 2. prototxt config
 4. optimize readin data queue
