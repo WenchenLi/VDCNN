@@ -83,6 +83,40 @@ def transform_sogou_data(data_file, output_filename):
             f.write(sentence + " " + label + "\n")
 
 
+def transform_lungutang(data_file, output_filename,print_stats=True):
+    """
+    transform lungutang data into fastText training format
+    """
+    from collections import defaultdict
+    import csv
+    import sys
+    reload(sys)
+    sys.setdefaultencoding('utf8')
+    stats = defaultdict(int)
+
+    with open("data/lungutang/" + output_filename, 'w') as fw:
+        with open(data_file,'r') as fr:
+            reader = csv.reader(fr)
+            for i,row in enumerate(reader):
+                if i == 0 : continue #skip header
+                raw_label = row[0].strip()
+                stats[raw_label] += 1
+                label = LABEL_start + raw_label
+
+                raw_sentence = row[1]
+                sentence = clean_str(str(sentence2pinyin(raw_sentence)))
+                # print i,raw_sentence
+                fw.write(sentence+" "+label+"\n")
+
+    if print_stats:
+        for k in stats:
+            print k,stats[k]
+
+
+
+
+
+
 def load_data_and_labels_fasttext(data_file):
     """    
     
@@ -110,7 +144,7 @@ def load_data_and_labels_fasttext(data_file):
 
             if current_label not in check_label_exists:
                 check_label_exists[current_label] = 1
-                index2label.append(current_label.replace("\n",""))
+                index2label.append(current_label.replace("\n", ""))
                 label2index[current_label] = current_label_index
                 current_label_index += 1
             else:
@@ -209,6 +243,8 @@ if __name__ == "__main__":
     # load_data_and_labels_change(p,n)
     # load_data_and_labels_fasttext("/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt_data_all.txt")
     # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/train.csv","sogou_data_train_dev.txt")
-    transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv","sogou_data_test.txt")
+    # transform_sogou_data("/home/wenchen/projects/VDCNN/data/sogou_news_csv/test.csv", "sogou_data_test.txt")
     # print word2pinyin("中心")
-    print sentence2pinyin("我来到北京清华大学")
+    # print sentence2pinyin("我来到北京清华大学")
+
+    transform_lungutang("data/lungutang/lungutang_all.csv","lungutang.txt")
