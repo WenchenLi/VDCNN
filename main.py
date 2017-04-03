@@ -53,7 +53,7 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default
 tf.flags.DEFINE_float("lr", 1e-4, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 10, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 10000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
@@ -213,7 +213,7 @@ with tf.Graph().as_default():
             accuracies = []
             start_index = 0
             end_index = start_index + FLAGS.batch_size
-            class_accu = {i: [0, 0] for i in xrange(num_classes)}  # [predict, ground_truth]
+            dev_confusion_matrix = np.zeros((num_classes, num_classes))
 
             for i in xrange(len(y_batch) / FLAGS.batch_size + 1):
                 feed_dict = {
@@ -226,6 +226,13 @@ with tf.Graph().as_default():
                     [vdcnn.loss, vdcnn.accuracy, vdcnn.predictions],
                     feed_dict)
 
+                for j in xrange(FLAGS.batch_size):
+                    # print "y",int(np.argmax(y_batch[i])),len(y_batch)
+                    # print "p",prediction[i],len(prediction)
+                    try:
+                        dev_confusion_matrix[np.argmax(y_batch[start_index:end_index][j])][int(prediction[j])] += 1
+                    except:#for the last round
+                        break
                 start_index = end_index
                 end_index += FLAGS.batch_size
                 losses.append(loss)
@@ -233,7 +240,7 @@ with tf.Graph().as_default():
 
             time_str = datetime.datetime.now().isoformat()
             print("{}: loss {:g}, acc {:g}".format(time_str, np.mean(losses), np.mean(accuracies)))
-
+            print dev_confusion_matrix
 
         def do_test(x_batch, y_batch, writer=None):
             """
