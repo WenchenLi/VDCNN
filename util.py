@@ -111,9 +111,9 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
 
     if print_stats:
         for k in stats:
-            print k,stats[k]
-
-        print np.mean(sentence_len)
+            print k, stats[k]
+        print "total", sum([stats.values()])
+        print 'mean char length', np.mean(sentence_len)
 
 
 
