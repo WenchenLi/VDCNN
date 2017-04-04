@@ -20,6 +20,8 @@ from config import FEATURE_LEN
 import tensorflow as tf
 import numpy as np
 import re
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
 
 import jieba
 import pypinyin
@@ -83,7 +85,7 @@ def transform_sogou_data(data_file, output_filename):
             f.write(sentence + " " + label + "\n")
 
 
-def transform_lungutang(data_file, output_filename,print_stats=True):
+def transform_lungutang(data_file, output_filename, print_stats=True):
     """
     transform lungutang data into fastText training format
     """
@@ -95,10 +97,10 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
     stats = defaultdict(int)
     sentence_len = []
     with open("data/lungutang/" + output_filename, 'w') as fw:
-        with open(data_file,'r') as fr:
+        with open(data_file, 'r') as fr:
             reader = csv.reader(fr)
-            for i,row in enumerate(reader):
-                if i == 0 : continue #skip header
+            for i, row in enumerate(reader):
+                if i == 0: continue  # skip header
                 raw_label = row[0].strip()
                 stats[raw_label] += 1
                 label = LABEL_start + raw_label
@@ -107,17 +109,13 @@ def transform_lungutang(data_file, output_filename,print_stats=True):
                 sentence = str(sentence2pinyin(raw_sentence))
                 sentence_len.append(len(sentence))
                 # print i,raw_sentence
-                fw.write(sentence+" "+label+"\n")
+                fw.write(sentence + " " + label + "\n")
 
     if print_stats:
         for k in stats:
             print k, stats[k]
         print "total", sum([stats.values()])
         print 'mean char length', np.mean(sentence_len)
-
-
-
-
 
 
 def load_data_and_labels_fasttext(data_file):
@@ -240,6 +238,109 @@ def latest_checkpoint(checkpoint_dir, latest_filename=None):
         # return None
 
 
+def draw_confusion_matrix(cm,step,train_path):
+    # cm = [[2.38600000e+03, 3.00000000e+00, 1.70000000e+01, 3.00000000e+01,
+    #       1.70000000e+01, 2.00000000e+00, 3.00000000e+00, 0.00000000e+00,
+    #       1.92000000e+02, 1.00000000e+00, 9.00000000e+00, 4.00000000e+00,
+    #       1.00000000e+00],
+    #      [3.00000000e+01, 1.40000000e+01, 1.00000000e+00, 1.00000000e+01,
+    #       3.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       2.50000000e+01, 0.00000000e+00, 2.00000000e+00, 0.00000000e+00,
+    #       0.00000000e+00],
+    #      [9.00000000e+00, 1.00000000e+00, 4.76000000e+02, 2.00000000e+00,
+    #       1.40000000e+01, 3.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       1.78000000e+02, 0.00000000e+00, 1.20000000e+01, 0.00000000e+00,
+    #       2.00000000e+00],
+    #      [2.40000000e+01, 6.00000000e+00, 1.00000000e+01, 6.20000000e+01,
+    #       1.40000000e+01, 1.00000000e+00, 0.00000000e+00, 1.00000000e+00,
+    #       1.86000000e+02, 0.00000000e+00, 1.00000000e+01, 1.00000000e+01,
+    #       0.00000000e+00],
+    #      [2.60000000e+01, 0.00000000e+00, 1.20000000e+01, 7.00000000e+00,
+    #       9.71000000e+02, 3.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       9.50000000e+01, 0.00000000e+00, 8.00000000e+00, 2.00000000e+00,
+    #       3.00000000e+00],
+    #      [1.00000000e+00, 0.00000000e+00, 7.00000000e+00, 3.00000000e+00,
+    #       4.00000000e+00, 5.90000000e+01, 0.00000000e+00, 0.00000000e+00,
+    #       2.38000000e+02, 0.00000000e+00, 4.10000000e+01, 0.00000000e+00,
+    #       0.00000000e+00],
+    #      [6.00000000e+00, 1.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       3.00000000e+00, 1.00000000e+00, 5.10000000e+01, 0.00000000e+00,
+    #       5.60000000e+01, 0.00000000e+00, 1.10000000e+01, 0.00000000e+00,
+    #       1.00000000e+00],
+    #      [1.00000000e+00, 0.00000000e+00, 0.00000000e+00, 4.00000000e+00,
+    #       0.00000000e+00, 1.00000000e+00, 0.00000000e+00, 4.00000000e+00,
+    #       1.50000000e+01, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       0.00000000e+00],
+    #      [7.30000000e+01, 4.00000000e+00, 5.40000000e+01, 3.20000000e+01,
+    #       2.50000000e+01, 4.10000000e+01, 1.30000000e+01, 3.00000000e+00,
+    #       7.67500000e+03, 1.00000000e+00, 3.18000000e+02, 4.00000000e+00,
+    #       1.70000000e+01],
+    #      [3.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00,
+    #       0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       4.00000000e+00, 1.00000000e+00, 3.00000000e+00, 0.00000000e+00,
+    #       0.00000000e+00],
+    #      [9.00000000e+00, 0.00000000e+00, 1.50000000e+01, 1.00000000e+00,
+    #       1.00000000e+01, 2.10000000e+01, 1.00000000e+00, 0.00000000e+00,
+    #       6.34000000e+02, 0.00000000e+00, 8.74000000e+02, 0.00000000e+00,
+    #       5.00000000e+00],
+    #      [7.00000000e+00, 0.00000000e+00, 6.00000000e+00, 6.00000000e+00,
+    #       2.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #       2.20000000e+01, 0.00000000e+00, 0.00000000e+00, 1.90000000e+01,
+    #       0.00000000e+00],
+    #      [1.00000000e+00, 0.00000000e+00, 2.00000000e+00, 0.00000000e+00,
+    #       2.00000000e+00, 1.00000000e+01, 0.00000000e+00, 0.00000000e+00,
+    #       2.44000000e+02, 0.00000000e+00, 4.30000000e+01, 0.00000000e+00,
+    #       3.40000000e+01]]
+
+    # __label__qq广告 2665
+    # __label__个人 85
+    # __label__人名广告 697
+    # __label__其他 324
+    # __label__微信广告 1127
+    # __label__敏感 353
+    # __label__无意义 130
+    # __label__昵称广告 25
+    # __label__正常 8260
+    # __label__网站链接广告 12
+    # __label__脏话 1570
+    # __label__问答广告 62
+    # __label__风险 336
+    # fontP = font_manager.FontProperties()
+    # fontP.set_family('SimHei')
+    # fontP.set_size(14)
+
+    labels = ["qq广告","个人","人名广告","其他","微信广告","敏感","无意义","昵称广告","正常","网站链接广告","脏话"
+              ,"问答广告","风险"]
+
+    conf_arr = np.array(cm, dtype=float)
+    norm_conf = np.array([ row/np.sum(row) for row in conf_arr])
+
+    fig = plt.figure()
+    plt.clf()
+    ax = fig.add_subplot(111)
+    ax.set_aspect(1)
+    res = ax.imshow(np.array(norm_conf), cmap=plt.cm.jet,
+                    interpolation='nearest')
+
+    width, height = norm_conf.shape
+
+    for x in xrange(width):
+        for y in xrange(height):
+            ax.annotate("%.2f" % norm_conf[x][y], xy=(y, x),
+                        horizontalalignment='center',
+                        verticalalignment='center')
+
+    cb = fig.colorbar(res)
+    alphabet = 'ABCDEFGHIJKLM'
+
+    plt.xticks(range(width), [l.decode('utf-8') for l in alphabet[:width]], )
+    plt.yticks(range(height),[l.decode('utf-8') for l in alphabet[:height]],)
+
+
+    plt.savefig(train_path+'/confusion_matrix'+str(step)+'.png', format='png')
+    for i in xrange(len(labels)):
+        print alphabet[i],":",labels[i],"accuracy:",cm[i][i]/sum(cm[i])
+
 if __name__ == "__main__":
     # p= '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.pos'
     # n = '/home/wenchen/projects/VDCNN/data/rt-polaritydata/rt-polarity.neg'
@@ -250,4 +351,5 @@ if __name__ == "__main__":
     # print word2pinyin("中心")
     # print sentence2pinyin("我来到北京清华大学")
 
-    transform_lungutang("data/lungutang/lungutang_all_update_13.csv","lungutang_13.txt")
+    transform_lungutang("data/lungutang/lungutang_all_update_13.csv", "lungutang_13.txt")
+    # confusion_matrix()

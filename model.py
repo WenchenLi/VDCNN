@@ -86,12 +86,14 @@ class VDCNN(object):
         self.build_model()
         self.build_loss_accu()
 
-
-    def build_loss_accu(self):
+    def build_loss_accu(self, weighted_loss=True):
+        # weighted loss given input_y, to train model with loss that affects less on unbalanced
+        # samples on classes
         with tf.name_scope("loss"):
             losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.input_y)
+            if weighted_loss:
+                losses = tf.divide(losses, tf.reduce_sum(self.input_y, axis=1))
             self.loss = tf.reduce_mean(losses) + self.l2_reg_lambda * self.l2_loss
-
         # accuracy
         self.predictions = tf.argmax(self.logits, 1, name="prediction")
         with tf.name_scope("accuracy"):

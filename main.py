@@ -227,6 +227,7 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: loss {:g}, acc {:g}".format(time_str, np.mean(losses), np.mean(accuracies)))
             print dev_confusion_matrix#row given true, col prediction
+            util.draw_confusion_matrix(dev_confusion_matrix, current_step, out_dir)
 
         def do_test(x_batch, y_batch, writer=None):
             """
