@@ -216,6 +216,34 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             yield shuffled_data[start_index:end_index]
 
 
+def batch_iter_weighted(data, batch_size, num_epochs, shuffle=True):
+    """
+    Generates a batch iterator for a dataset.
+    """
+    data = np.array(data)
+    data_size = len(data)
+    data = np.array(sorted(data, key=lambda k:np.argmax(k[1])))
+    indexes = [0]
+    cur_key = np.argmax(data[0][1])
+    for i in xrange(data_size):
+        if np.argmax(data[i][1]) != cur_key:
+            indexes.append(i)
+            cur_key = np.argmax(data[i][1])
+
+    num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
+    class_size = batch_size/len(data[0][1])
+
+    for epoch in range(num_epochs):
+        for batch_num in range(num_batches_per_epoch):
+            sample_indexes = []
+            for i in xrange(len(indexes) - 1):
+                sample_indexes.extend(np.random.randint(indexes[i], indexes[i + 1], class_size))
+            sample_indexes.extend(np.random.randint(0, len(data), batch_size - len(sample_indexes)))
+            sample_indexes = np.array(sample_indexes)
+
+            yield data[sample_indexes]
+
+
 def latest_checkpoint(checkpoint_dir, latest_filename=None):
     """Finds the filename of latest saved checkpoint file.
     

@@ -97,16 +97,13 @@ print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
 
 
 # ------ random load data part------
-# Randomly shuffle data
-np.random.seed(10)
-shuffle_indices = np.random.permutation(np.arange(len(y)))
-x_shuffled = x[shuffle_indices]
-y_shuffled = y[shuffle_indices]
-
 # Split train/dev set
-x_train, x_dev, y_train, y_dev = train_test_split(x_shuffled, y_shuffled,test_size=0.2)
-
-num_classes = y_train.shape[1]
+num_classes = y.shape[1]
+x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=0.2)
+test ={i: 0 for i in xrange(num_classes)}
+# for k in y_train:
+#     test[np.argmax(k)]+=1
+# print test
 y_dev_class_dist = {i: 0 for i in xrange(num_classes)}
 for d in y_dev:
     y_dev_class_dist[np.argmax(d)] += 1
@@ -247,7 +244,7 @@ with tf.Graph().as_default():
 
 
         # Generate batches
-        batches = util.batch_iter(
+        batches = util.batch_iter_weighted(
             list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
 
         # Training loop. For each batch...
