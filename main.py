@@ -37,7 +37,7 @@ from sklearn.model_selection import train_test_split
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
 # tf.flags.DEFINE_float("test_sample_percentage", .0, "Percentage of the training data to use for test")
-tf.flags.DEFINE_string("train_data_file", "./data/lungutang/lungutang_13.txt", "train Data source")
+tf.flags.DEFINE_string("train_data_file", "./data/lungutang/lungutang_13_new.txt", "train Data source")
 tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.txt", "test Data source")
 # data/rt-polaritydata/rt_data_all.txt
 # data/sogou_news_csv/toy_sogou_news.txt
@@ -47,13 +47,13 @@ tf.flags.DEFINE_string("test_data_file", "./data/sogou_news_csv/sogou_data_test.
 # Model Hyperparameters
 tf.flags.DEFINE_integer("feature_len", config.FEATURE_LEN, "maximum length of the sentence at char level")
 tf.flags.DEFINE_integer("embedding_dim", 16, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_float("l2_reg_lambda", 0.000, "L2 regularization lambda (default: 0.0)")
+tf.flags.DEFINE_float("l2_reg_lambda", 0.001, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
 tf.flags.DEFINE_float("lr", 1e-4, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 128, "Batch Size (default: 128)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
-tf.flags.DEFINE_integer("evaluate_every", 10, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many steps (default: 100)")
 tf.flags.DEFINE_integer("checkpoint_every", 10000, "Save model after this many steps (default: 1000)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 tf.flags.DEFINE_string("TRAIN_DIR", "train_dir", "training directory to store training results")
@@ -101,14 +101,15 @@ print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
 num_classes = y.shape[1]
 x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=0.2)
 test ={i: 0 for i in xrange(num_classes)}
-# for k in y_train:
-#     test[np.argmax(k)]+=1
-# print test
+labels = []
 y_dev_class_dist = {i: 0 for i in xrange(num_classes)}
 for d in y_dev:
     y_dev_class_dist[np.argmax(d)] += 1
 for k in y_dev_class_dist:
+    print "dev set data stat"
     print index2label[k], y_dev_class_dist[k]
+    labels.append(index2label[k].replace("__label__",""))
+
 print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
 # Training
@@ -210,8 +211,6 @@ with tf.Graph().as_default():
                     feed_dict)
 
                 for j in xrange(FLAGS.batch_size):
-                    # print "y",int(np.argmax(y_batch[i])),len(y_batch)
-                    # print "p",prediction[i],len(prediction)
                     try:
                         dev_confusion_matrix[np.argmax(y_batch[start_index:end_index][j])][int(prediction[j])] += 1
                     except:#for the last round
@@ -224,7 +223,7 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: loss {:g}, acc {:g}".format(time_str, np.mean(losses), np.mean(accuracies)))
             print dev_confusion_matrix#row given true, col prediction
-            util.draw_confusion_matrix(dev_confusion_matrix, current_step, out_dir)
+            util.draw_confusion_matrix(dev_confusion_matrix, labels, current_step, out_dir)
 
         def do_test(x_batch, y_batch, writer=None):
             """
