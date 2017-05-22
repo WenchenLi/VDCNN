@@ -61,6 +61,23 @@ effective but too-tepid biopic __label__pos
 ```
 
 ## TODO
+```
+model.py
+    119行：
+        embedded_f0_channel = tf.reshape(embedded_chars_expanded,
+                                             [-1, self.f0, self.s, self.embedding_size])
+    应改为：
+        embedded_f0_channel = tf.reshape(embedded_chars_expanded,
+                                             [-1, self.s, self.embedding_size, self.f0])
+
+    157行：
+     multiplier = max_pool.get_shape()[2].value
+    应改为
+     multiplier = max_pool.get_shape()[1].value
+    
+   修改前，我们训练模型成功率小于60%，修改后正确率提高到80%以上，训练参数量也变小很多。
+```
+
 3. uniform sample from different category[weighted sample][precision/recall/f1][give different weights to the positive and negative examples in the training criterion.]
 3. add [n-gram cnn as comparision](https://github.com/dennybritz/cnn-text-classification-tf)
 
@@ -69,6 +86,7 @@ effective but too-tepid biopic __label__pos
 4. add shortcut
 5. add kMaxPooling
 6. fold for dynamic graph
+
 
 # reference
 [1][Conneau, Alexis et al. “Very Deep Convolutional Networks for Natural Language Processing.” CoRR abs/1606.01781 (2016): n. pag.](https://pdfs.semanticscholar.org/f797/fd44b9ddd5845611eb7a705ca9464a8819d1.pdf?_ga=1.122241998.496193353.1486868690)
